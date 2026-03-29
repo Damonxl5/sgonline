@@ -2,7 +2,7 @@
 const API_CONFIG = {
   baseURL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8787/v1'
-    : 'https://damonwu.workers.dev/v1',
+    : 'https://express-d1-app.damonwu.workers.dev/v1',
   timeout: 10000
 };
 
