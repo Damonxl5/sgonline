@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的书架 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', accent: '#f97316' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family:'Inter',sans-serif; background:#f8fafc; }
+  .nav-shadow { box-shadow:0 2px 20px rgba(15,76,129,0.08); }
+  .tab-active { border-bottom:2px solid #0f4c81; color:#0f4c81; font-weight:600; }
+  .card-hover { transition:all 0.2s; }
+  .card-hover:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(15,76,129,0.1); }
+  .progress-bar { background:linear-gradient(90deg,#0f4c81,#1a6bb5); }
+  .scrollbar-hide::-webkit-scrollbar { display:none; }
+  .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
+  .urgent { animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+</style>
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+</head>
+<body class="min-h-screen">
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+
+<!-- Nav -->
+<nav class="bg-white nav-shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
+    <a href="#" class="flex items-center gap-2" data-nav="home">
+      <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+        <i class="fas fa-book-open text-white text-xs"></i>
+      </div>
+      <span class="font-bold text-primary hidden sm:block">NLB eReads</span>
+    </a>
+    <div class="flex-1"></div>
+    <button class="p-2 text-gray-500 hover:text-primary"><i class="fas fa-bell"></i></button>
+    <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+      <span class="text-white text-xs font-bold user-avatar-initial"></span>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900">我的书架</h1>
+      <p class="text-sm text-gray-500 mt-0.5">管理借阅、下载与收藏</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="bg-white rounded-xl px-4 py-2 shadow-sm text-center">
+        <p class="text-lg font-bold text-primary" id="stat-reading">0</p>
+        <p class="text-xs text-gray-400">借阅中</p>
+      </div>
+      <div class="bg-white rounded-xl px-4 py-2 shadow-sm text-center">
+        <p class="text-lg font-bold text-green-600" id="stat-downloaded">0</p>
+        <p class="text-xs text-gray-400">已下载</p>
+      </div>
+      <div class="bg-white rounded-xl px-4 py-2 shadow-sm text-center">
+        <p class="text-lg font-bold text-orange-500" id="stat-urgent">0</p>
+        <p class="text-xs text-gray-400">即将到期</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex border-b border-gray-200 mb-5 bg-white rounded-t-2xl px-4 shadow-sm overflow-x-auto scrollbar-hide" id="shelf-tabs">
+    <button onclick="switchShelfTab(this,'borrowing')" class="tab-active py-3 px-4 text-sm">借阅中 <span class="ml-1 bg-primary text-white text-xs px-1.5 py-0.5 rounded-full" id="tab-borrowing-count">0</span></button>
+    <button onclick="switchShelfTab(this,'offline')" class="py-3 px-4 text-sm text-gray-500 hover:text-gray-700">离线下载 <span class="ml-1 bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded-full" id="tab-offline-count">0</span></button>
+    <button onclick="switchShelfTab(this,'collection')" class="py-3 px-4 text-sm text-gray-500 hover:text-gray-700">收藏书单</button>
+    <button onclick="switchShelfTab(this,'notes')" class="py-3 px-4 text-sm text-gray-500 hover:text-gray-700">阅读笔记</button>
+    <button onclick="switchShelfTab(this,'history')" class="py-3 px-4 text-sm text-gray-500 hover:text-gray-700">借阅历史</button>
+  </div>
+
+  <!-- Tab: Borrowing -->
+  <div id="tab-borrowing">
+    <!-- Urgent Warning -->
+    <div id="urgent-warning" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-3 hidden"></div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="borrowing-list">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="borrowing-list"></div>
+  </div>
+
+  <!-- Tab: Offline -->
+  <div id="tab-offline" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-gray-500">已下载 2 本 · 占用 11.0 MB</p>
+      <button class="text-sm text-red-500 hover:underline">清理缓存</button>
+    </div>
+    <div class="space-y-3">
+      <div class="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4 card-hover">
+        <div class="w-12 h-16 rounded-xl flex-shrink-0" style="background:linear-gradient(135deg,#0f4c81,#1a6bb5)"></div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-800 text-sm">新加坡史</p>
+          <p class="text-xs text-gray-400 mt-0.5">EPUB · 2.3 MB · 下载于 2025-03-10</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs text-green-600 font-medium"><i class="fas fa-check-circle mr-1"></i>可离线阅读</span>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 bg-primary text-white rounded-xl text-xs font-medium hover:bg-primary-dark transition">阅读</button>
+          <button class="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-50 transition"><i class="fas fa-trash text-xs"></i></button>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4 card-hover">
+        <div class="w-12 h-16 rounded-xl flex-shrink-0" style="background:linear-gradient(135deg,#dc2626,#f97316)"></div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-800 text-sm">活着</p>
+          <p class="text-xs text-gray-400 mt-0.5">PDF · 8.7 MB · 下载于 2025-03-08</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs text-green-600 font-medium"><i class="fas fa-check-circle mr-1"></i>可离线阅读</span>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 bg-primary text-white rounded-xl text-xs font-medium hover:bg-primary-dark transition">阅读</button>
+          <button class="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-50 transition"><i class="fas fa-trash text-xs"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Collection -->
+  <div id="tab-collection" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-gray-500">我的书单与收藏</p>
+      <button class="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl text-xs font-medium hover:bg-primary-dark transition">
+        <i class="fas fa-plus text-xs"></i>新建书单
+      </button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+            <i class="fas fa-flag text-amber-500"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-gray-800 text-sm">新加坡历史</p>
+            <p class="text-xs text-gray-400">8本书</p>
+          </div>
+        </div>
+        <div class="flex -space-x-2">
+          <div class="w-8 h-10 rounded-md border-2 border-white" style="background:linear-gradient(135deg,#0f4c81,#1a6bb5)"></div>
+          <div class="w-8 h-10 rounded-md border-2 border-white" style="background:linear-gradient(135deg,#7c3aed,#a855f7)"></div>
+          <div class="w-8 h-10 rounded-md border-2 border-white" style="background:linear-gradient(135deg,#059669,#10b981)"></div>
+          <div class="w-8 h-10 rounded-md border-2 border-white bg-gray-100 flex items-center justify-center">
+            <span class="text-xs text-gray-500">+5</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+            <i class="fas fa-heart text-blue-500"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-gray-800 text-sm">我的收藏</p>
+            <p class="text-xs text-gray-400">15本书</p>
+          </div>
+        </div>
+        <div class="flex -space-x-2">
+          <div class="w-8 h-10 rounded-md border-2 border-white" style="background:linear-gradient(135deg,#dc2626,#f97316)"></div>
+          <div class="w-8 h-10 rounded-md border-2 border-white" style="background:linear-gradient(135deg,#be185d,#ec4899)"></div>
+          <div class="w-8 h-10 rounded-md border-2 border-white bg-gray-100 flex items-center justify-center">
+            <span class="text-xs text-gray-500">+13</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer border-2 border-dashed border-gray-200 flex items-center justify-center">
+        <div class="text-center">
+          <i class="fas fa-plus text-gray-300 text-2xl mb-2"></i>
+          <p class="text-sm text-gray-400">新建书单</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Notes -->
+  <div id="tab-notes" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-gray-500">共 12 条笔记</p>
+      <div class="flex gap-2">
+        <button class="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-600 hover:bg-gray-50 transition">
+          <i class="fas fa-download mr-1"></i>导出全部
+        </button>
+      </div>
+    </div>
+    <div class="space-y-3">
+      <div class="bg-white rounded-2xl p-4 shadow-sm card-hover">
+        <div class="flex items-start gap-3">
+          <div class="w-1 h-full bg-yellow-400 rounded-full flex-shrink-0 self-stretch min-h-12"></div>
+          <div class="flex-1">
+            <p class="text-sm text-gray-800 leading-relaxed">"日本军队攻陷新加坡，英国殖民统治宣告中断。这一被丘吉尔称为'英国历史上最惨烈的灾难'的事件..."</p>
+            <div class="flex items-center gap-3 mt-2">
+              <span class="text-xs text-gray-400">《新加坡史》第134页</span>
+              <span class="text-xs text-gray-400">2025-03-15</span>
+              <button class="ml-auto text-xs text-primary hover:underline">编辑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm card-hover">
+        <div class="flex items-start gap-3">
+          <div class="w-1 h-full bg-blue-400 rounded-full flex-shrink-0 self-stretch min-h-12"></div>
+          <div class="flex-1">
+            <p class="text-sm text-gray-800 leading-relaxed">"人民行动党的崛起，标志着新加坡本土政治力量的成熟。"</p>
+            <p class="text-xs text-gray-500 mt-1 bg-gray-50 rounded-lg p-2">我的笔记：这与李光耀的回忆录中的描述相互印证，值得深入研究。</p>
+            <div class="flex items-center gap-3 mt-2">
+              <span class="text-xs text-gray-400">《新加坡史》第198页</span>
+              <span class="text-xs text-gray-400">2025-03-14</span>
+              <button class="ml-auto text-xs text-primary hover:underline">编辑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: History -->
+  <div id="tab-history" class="hidden">
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+        <p class="text-sm font-medium text-gray-700">历史借阅记录</p>
+        <select class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none">
+          <option>全部时间</option>
+          <option>近3个月</option>
+          <option>近半年</option>
+        </select>
+      </div>
+      <div class="divide-y divide-gray-50" id="history-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchShelfTab(btn, name) {
+  document.querySelectorAll('#shelf-tabs button').forEach(b => {
+    b.classList.remove('tab-active');
+    b.classList.add('text-gray-500');
+  });
+  btn.classList.add('tab-active');
+  btn.classList.remove('text-gray-500');
+  ['borrowing','offline','collection','notes','history'].forEach(t => {
+    document.getElementById('tab-'+t).classList.add('hidden');
+  });
+  document.getElementById('tab-'+name).classList.remove('hidden');
+}
+</script>
+</body>
+</html>
+<script>
+$(function(){
+  // 全局 data-nav 跳转
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+
+  // Tab 切换（覆盖 onclick，统一用 jQuery）
+  $(document).on('click', '#shelf-tabs button', function(){
+    const tabName = $(this).attr('onclick').match(/'(\w+)'/)[1];
+    switchShelfTab(this, tabName);
+  });
+
+  // 继续阅读 → 阅读页
+  $(document).on('click', 'button:contains("继续阅读")', function(){ navigateTo('reading'); });
+
+  // 离线阅读 → 阅读页
+  $(document).on('click', 'button:contains("阅读")', function(){ navigateTo('reading'); });
+
+  // 书籍封面/标题点击 → 书籍详情
+  $(document).on('click', '.book-card, [class*="rounded-xl"][style*="gradient"]', function(e){
+    if (!$(e.target).is('button') && !$(e.target).closest('button').length) {
+      navigateTo('book-detail');
+    }
+  });
+
+  // 续借按钮反馈
+  $(document).on('click', 'button:contains("续借"):not(:contains("立即"))', function(){
+    const $btn = $(this);
+    $btn.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+    setTimeout(function(){
+      $btn.html('已续借').css({'background':'#16a34a','color':'#fff','border':'none'}).prop('disabled', false);
+      // 更新剩余天数
+      const $card = $btn.closest('[class*="rounded-2xl"]');
+      $card.find('span:contains("天")').first().each(function(){
+        const days = parseInt($(this).text()) + 21;
+        $(this).text(days + '天').css('color', days > 7 ? '#16a34a' : '#f97316');
+      });
+      showToast('续借成功，已延长21天');
+      setTimeout(function(){ $btn.html('续借').css({'background':'','color':'','border':''}); }, 3000);
+    }, 1000);
+  });
+
+  // 立即续借（紧急提醒）
+  $(document).on('click', 'button:contains("立即续借")', function(){
+    const $btn = $(this);
+    $btn.html('<i class="fas fa-spinner fa-spin mr-1"></i>处理中...').prop('disabled', true);
+    setTimeout(function(){
+      $btn.html('<i class="fas fa-check mr-1"></i>续借成功').css('background','#16a34a').prop('disabled', false);
+      $btn.closest('.bg-red-50').fadeOut(500, function(){ $(this).remove(); });
+      showToast('《活着》续借成功，剩余26天');
+    }, 1000);
+  });
+
+  // 归还按钮 → 确认弹窗
+  $(document).on('click', 'button:contains("归还")', function(){
+    const $btn = $(this);
+    const bookName = $btn.closest('[class*="rounded-2xl"]').find('p.font-semibold').first().text();
+    showConfirm('确认归还《' + bookName + '》？', '归还后将无法继续阅读', function(){
+      $btn.closest('[class*="rounded-2xl"]').fadeOut(400, function(){ $(this).remove(); });
+      showToast('《' + bookName + '》已归还');
+    });
+  });
+
+  // 删除离线文件
+  $(document).on('click', 'button:contains("删除")', function(){
+    const $btn = $(this);
+    const bookName = $btn.closest('[class*="rounded-2xl"]').find('p.font-semibold').first().text();
+    showConfirm('删除《' + bookName + '》的离线文件？', '删除后需重新下载', function(){
+      $btn.closest('[class*="rounded-2xl"]').fadeOut(400, function(){ $(this).remove(); });
+      showToast('离线文件已删除');
+    });
+  });
+
+  // 新建书单
+  $(document).on('click', 'button:contains("新建书单")', function(){
+    showInputModal('新建书单', '请输入书单名称', function(name){
+      if (!name) return;
+      const $grid = $(this).closest('.grid');
+      const $newCard = $(`
+        <div class="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <i class="fas fa-list text-blue-500"></i>
+            </div>
+            <div><p class="font-semibold text-gray-800 text-sm">${name}</p><p class="text-xs text-gray-400">0本书</p></div>
+          </div>
+        </div>`);
+      $('.grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-3').prepend($newCard);
+      showToast('书单「' + name + '」已创建');
+    });
+  });
+
+  // 导出笔记
+  $(document).on('click', 'button:contains("导出全部")', function(){
+    const $btn = $(this);
+    $btn.html('<i class="fas fa-spinner fa-spin mr-1"></i>导出中...');
+    setTimeout(function(){
+      $btn.html('<i class="fas fa-check mr-1"></i>导出成功');
+      showToast('笔记已导出为 TXT 文件');
+      setTimeout(function(){ $btn.html('<i class="fas fa-download mr-1"></i>导出全部'); }, 2000);
+    }, 1500);
+  });
+
+  // 笔记编辑
+  $(document).on('click', 'button:contains("编辑")', function(){
+    const $noteRow = $(this).closest('[class*="rounded-2xl"]');
+    const noteText = $noteRow.find('p.text-sm.text-gray-800').text();
+    showInputModal('编辑笔记', noteText, function(newText){
+      if (newText) $noteRow.find('p.text-sm.text-gray-800').text(newText);
+    }, true);
+  });
+
+  // 清理缓存
+  $(document).on('click', 'button:contains("清理缓存")', function(){
+    showConfirm('清理所有离线缓存？', '清理后需重新下载书籍', function(){
+      $('#tab-offline').find('[class*="rounded-2xl"]:not(:first)').fadeOut(400, function(){ $(this).remove(); });
+      showToast('缓存已清理，释放 11.0 MB');
+    });
+  });
+
+  // ---- 工具函数 ----
+  function showToast(msg){
+    const $t = $('<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg z-50 whitespace-nowrap">' + msg + '</div>');
+    $('body').append($t);
+    setTimeout(function(){ $t.fadeOut(300, function(){ $(this).remove(); }); }, 2000);
+  }
+
+  function showConfirm(title, desc, onConfirm){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl text-center">
+          <i class="fas fa-exclamation-circle text-orange-400 text-3xl mb-3"></i>
+          <h3 class="font-semibold text-gray-800 mb-1">${title}</h3>
+          <p class="text-sm text-gray-400 mb-5">${desc}</p>
+          <div class="flex gap-3">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-ok flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium">确认</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-ok').on('click', function(){ $modal.remove(); onConfirm(); });
+  }
+
+  function showInputModal(title, placeholder, onSave, isTextarea){
+    const inputHtml = isTextarea
+      ? `<textarea class="modal-input w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20" rows="4">${placeholder}</textarea>`
+      : `<input type="text" class="modal-input w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="${placeholder}">`;
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 class="font-semibold text-gray-800 mb-4">${title}</h3>
+          ${inputHtml}
+          <div class="flex gap-3 mt-4">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-save flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium">保存</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-save').on('click', function(){
+      const val = $modal.find('.modal-input').val();
+      $modal.remove();
+      onSave(val);
+    });
+  }
+});
+</script>
+<script src="bookshelf-integration.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "nlb-ereads",
+  "version": "1.0.0",
+  "description": "新加坡国家图书馆电子书平台",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["library", "ebook", "singapore"],
+  "author": "",
+  "license": "MIT"
+}

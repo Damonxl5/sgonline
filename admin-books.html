@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="admin.nav.books">书籍管理 - NLB Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', 'primary-dark': '#0a3560' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .sidebar { background: #0f172a; width: 240px; transition: all 0.3s; }
+  .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+  .sidebar-link:hover { background: #1e293b; color: #fff; }
+  .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
+  .main-content { background: #f8fafc; flex: 1; height: 100vh; overflow-y: auto; }
+  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 40; }
+  .table-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden; }
+</style>
+<script src="nav.js"></script>
+<script src="i18n.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<aside class="sidebar flex-shrink-0 flex flex-col h-screen">
+  <div class="h-16 flex items-center gap-3 px-6 border-b border-gray-800">
+    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+      <i class="fas fa-shield-alt text-white text-sm"></i>
+    </div>
+    <span class="text-white font-bold tracking-wide">NLB Admin</span>
+  </div>
+
+  <nav class="flex-1 py-4 space-y-1">
+    <a href="#" class="sidebar-link" data-nav="admin-dashboard">
+      <i class="fas fa-chart-line w-5 text-center"></i>
+      <span data-i18n="admin.nav.dashboard">管理大盘</span>
+    </a>
+    <a href="#" class="sidebar-link active" data-nav="admin-books">
+      <i class="fas fa-book w-5 text-center"></i>
+      <span data-i18n="admin.nav.books">书籍管理</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-users">
+      <i class="fas fa-users w-5 text-center"></i>
+      <span data-i18n="admin.nav.users">用户管理</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-borrows">
+      <i class="fas fa-exchange-alt w-5 text-center"></i>
+      <span data-i18n="admin.nav.borrows">借阅记录</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-notices">
+      <i class="fas fa-bullhorn w-5 text-center"></i>
+      <span data-i18n="admin.nav.notices">系统公告</span>
+    </a>
+  </nav>
+
+  <div class="p-4 border-t border-gray-800">
+    <button class="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition" data-nav="admin-login">
+      <i class="fas fa-sign-out-alt"></i> <span data-i18n="admin.logout">退出登录</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content flex flex-col">
+  <header class="top-header">
+    <div class="flex items-center gap-4">
+      <h1 class="text-lg font-semibold text-gray-800" data-i18n="admin.books.title">书籍资源库管理</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">A</div>
+    </div>
+  </header>
+
+  <div class="p-6">
+    <!-- Toolbar -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div class="relative flex-1 sm:w-80">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input type="text" id="search-input" data-i18n-placeholder="admin.books.search.placeholder" placeholder="搜索书名、作者、ISBN..." class="w-full pl-10 pr-20 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+          <button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary text-white rounded-lg text-xs hover:bg-primary-dark">搜索</button>
+        </div>
+        <select id="filter-category" class="py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 outline-none focus:ring-2 focus:ring-primary/20">
+          <option value="all" data-i18n="admin.books.filter.cat">全部分类</option>
+          <option>历史人文</option>
+          <option>文学小说</option>
+          <option>科技互联</option>
+        </select>
+        <select class="py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 outline-none focus:ring-2 focus:ring-primary/20">
+          <option data-i18n="admin.books.filter.status">全部状态</option>
+          <option>可借阅</option>
+          <option>已借空</option>
+        </select>
+      </div>
+      <button class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 flex-shrink-0" onclick="showBookModal()">
+        <i class="fas fa-plus"></i> <span data-i18n="admin.books.add">录入新书</span>
+      </button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container mb-20">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left whitespace-nowrap">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider font-semibold">
+              <th class="px-6 py-4" data-i18n="admin.books.col.info">书籍信息</th>
+              <th class="px-6 py-4" data-i18n="admin.books.col.cat">分类/语言</th>
+              <th class="px-6 py-4 text-center" data-i18n="admin.books.col.total">副本总量</th>
+              <th class="px-6 py-4 text-center" data-i18n="admin.books.col.available">可借阅量</th>
+              <th class="px-6 py-4" data-i18n="admin.books.col.status">状态</th>
+              <th class="px-6 py-4 text-right" data-i18n="admin.books.col.action">操作</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm" id="books-tbody">
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded shadow-sm"></div>
+                  <div>
+                    <p class="font-bold text-gray-800">新加坡史</p>
+                    <p class="text-xs text-gray-400 mt-0.5">柯木林 · ISBN: 978-981-XXX</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-gray-600">历史人文 / 中文</td>
+              <td class="px-6 py-4 text-center text-gray-600 font-medium">10</td>
+              <td class="px-6 py-4 text-center text-primary font-bold">3</td>
+              <td class="px-6 py-4"><span class="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium border border-green-100">可借阅</span></td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button class="p-1.5 text-gray-400 hover:text-blue-500 transition" title="编辑" onclick="showBookModal(true)"><i class="fas fa-edit"></i></button>
+                  <button class="p-1.5 text-gray-400 hover:text-red-500 transition" title="删除" onclick="deleteConfirm()"><i class="fas fa-trash-alt"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-14 bg-gradient-to-br from-orange-600 to-orange-800 rounded shadow-sm"></div>
+                  <div>
+                    <p class="font-bold text-gray-800">从第三世界到第一世界</p>
+                    <p class="text-xs text-gray-400 mt-0.5">李光耀 · ISBN: 978-981-00X</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-gray-600">历史人文 / 中文</td>
+              <td class="px-6 py-4 text-center text-gray-600 font-medium">15</td>
+              <td class="px-6 py-4 text-center text-primary font-bold">12</td>
+              <td class="px-6 py-4"><span class="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium border border-green-100">可借阅</span></td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button class="p-1.5 text-gray-400 hover:text-blue-500 transition" title="编辑" onclick="showBookModal(true)"><i class="fas fa-edit"></i></button>
+                  <button class="p-1.5 text-gray-400 hover:text-red-500 transition" title="删除" onclick="deleteConfirm()"><i class="fas fa-trash-alt"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-14 bg-gradient-to-br from-purple-600 to-indigo-800 rounded shadow-sm"></div>
+                  <div>
+                    <p class="font-bold text-gray-800">三体（全集）</p>
+                    <p class="text-xs text-gray-400 mt-0.5">刘慈欣 · ISBN: 978-7-536</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-gray-600">科幻小说 / 中文</td>
+              <td class="px-6 py-4 text-center text-gray-600 font-medium">8</td>
+              <td class="px-6 py-4 text-center text-red-500 font-bold">0</td>
+              <td class="px-6 py-4"><span class="bg-red-50 text-red-600 px-2.5 py-1 rounded-full text-xs font-medium border border-red-100">已借空</span></td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button class="p-1.5 text-gray-400 hover:text-blue-500 transition" title="编辑" onclick="showBookModal(true)"><i class="fas fa-edit"></i></button>
+                  <button class="p-1.5 text-gray-400 hover:text-red-500 transition" title="删除" onclick="deleteConfirm()"><i class="fas fa-trash-alt"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-14 bg-gradient-to-br from-cyan-600 to-teal-800 rounded shadow-sm"></div>
+                  <div>
+                    <p class="font-bold text-gray-800">Crazy Rich Asians</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Kevin Kwan · ISBN: 978-0-385</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-gray-600">Fiction / 英文</td>
+              <td class="px-6 py-4 text-center text-gray-600 font-medium">12</td>
+              <td class="px-6 py-4 text-center text-primary font-bold">8</td>
+              <td class="px-6 py-4"><span class="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium border border-green-100">可借阅</span></td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button class="p-1.5 text-gray-400 hover:text-blue-500 transition" title="编辑" onclick="showBookModal(true)"><i class="fas fa-edit"></i></button>
+                  <button class="p-1.5 text-gray-400 hover:text-red-500 transition" title="删除" onclick="deleteConfirm()"><i class="fas fa-trash-alt"></i></button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+        <span class="text-sm text-gray-500" id="books-total">共 45,231 条记录，当前显示 1-4 条</span>
+        <div class="flex items-center gap-1" id="books-pagination">
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center" data-page="prev"><i class="fas fa-chevron-left text-xs"></i></button>
+          <button class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center text-sm font-medium" data-page="1">1</button>
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center text-sm" data-page="2">2</button>
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center text-sm" data-page="3">3</button>
+          <span class="px-1 text-gray-400">...</span>
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center" data-page="next"><i class="fas fa-chevron-right text-xs"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+$(function() {
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+});
+</script>
+<script src="admin-books-integration.js"></script>
+</body>
+</html>

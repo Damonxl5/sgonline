@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帮助与客服 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', accent: '#f97316' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family:'Inter',sans-serif; background:#f8fafc; }
+  .nav-shadow { box-shadow:0 2px 20px rgba(15,76,129,0.08); }
+  .hero-gradient { background:linear-gradient(135deg,#0f4c81 0%,#1a6bb5 60%,#0e7490 100%); }
+  .faq-item { transition:all 0.2s; }
+  .chat-bubble-user { background:#0f4c81; color:#fff; border-radius:18px 18px 4px 18px; }
+  .chat-bubble-bot { background:#f1f5f9; color:#1f2937; border-radius:18px 18px 18px 4px; }
+  .card-hover { transition:all 0.2s; }
+  .card-hover:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(15,76,129,0.1); }
+</style>
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+</head>
+<body class="min-h-screen">
+
+<!-- Nav -->
+<nav class="bg-white nav-shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
+    <a href="#" class="flex items-center gap-2" data-nav="home">
+      <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+        <i class="fas fa-book-open text-white text-xs"></i>
+      </div>
+      <span class="font-bold text-primary hidden sm:block">NLB eReads</span>
+    </a>
+    <div class="flex-1"></div>
+    <button class="p-2 text-gray-500 hover:text-primary"><i class="fas fa-bell"></i></button>
+    <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+      <span class="text-white text-xs font-bold user-avatar-initial"></span>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- Hero -->
+  <div class="hero-gradient rounded-2xl p-6 sm:p-8 mb-6 relative overflow-hidden">
+    <div class="absolute right-0 top-0 opacity-10">
+      <i class="fas fa-headset text-white" style="font-size:180px;position:absolute;right:-20px;top:-20px;"></i>
+    </div>
+    <div class="relative z-10">
+      <h1 class="text-2xl font-bold text-white mb-2">帮助中心</h1>
+      <p class="text-blue-100 text-sm mb-5">7×24小时智能客服，随时为您解答</p>
+      <div class="relative max-w-lg">
+        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input type="text" id="help-search" placeholder="搜索问题，如：如何借阅电子书..." class="w-full pl-11 pr-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-white/30 bg-white/90">
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Help Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="quick-help-card bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer text-center">
+      <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-sign-in-alt text-primary text-lg"></i>
+      </div>
+      <p class="text-sm font-medium text-gray-800">登录问题</p>
+      <p class="text-xs text-gray-400 mt-1">借书证/密码找回</p>
+    </div>
+    <div class="quick-help-card bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer text-center">
+      <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-book text-green-600 text-lg"></i>
+      </div>
+      <p class="text-sm font-medium text-gray-800">借阅流程</p>
+      <p class="text-xs text-gray-400 mt-1">如何借书/续借/归还</p>
+    </div>
+    <div class="quick-help-card bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer text-center">
+      <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-tablet-alt text-purple-600 text-lg"></i>
+      </div>
+      <p class="text-sm font-medium text-gray-800">设备推送</p>
+      <p class="text-xs text-gray-400 mt-1">Kindle/阅读器配置</p>
+    </div>
+    <div class="quick-help-card bg-white rounded-2xl p-4 shadow-sm card-hover cursor-pointer text-center">
+      <div class="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-download text-orange-500 text-lg"></i>
+      </div>
+      <p class="text-sm font-medium text-gray-800">离线下载</p>
+      <p class="text-xs text-gray-400 mt-1">下载与缓存管理</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+    <!-- FAQ Section -->
+    <div class="lg:col-span-3 space-y-4">
+      <h2 class="text-lg font-bold text-gray-800">常见问题</h2>
+
+      <!-- FAQ Groups -->
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+          <i class="fas fa-sign-in-alt text-primary text-sm"></i>
+          <h3 class="font-semibold text-gray-800 text-sm">登录与账号</h3>
+        </div>
+        <div class="divide-y divide-gray-50">
+          <div class="faq-item px-5 py-4 cursor-pointer hover:bg-gray-50" onclick="toggleFaq(this)">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-700 font-medium">忘记借书证密码怎么办？</p>
+              <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+            </div>
+            <div class="faq-answer hidden mt-3 text-sm text-gray-500 leading-relaxed">
+              您可以通过以下方式重置密码：<br>
+              1. 点击登录页"忘记密码"，通过绑定手机号验证码重置<br>
+              2. 前往任意NLB图书馆柜台，凭身份证重置<br>
+              3. 拨打NLB热线 6332 3255 进行人工核验
+            </div>
+          </div>
+          <div class="faq-item px-5 py-4 cursor-pointer hover:bg-gray-50" onclick="toggleFaq(this)">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-700 font-medium">如何为家人（儿童/老人）绑定账号？</p>
+              <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+            </div>
+            <div class="faq-answer hidden mt-3 text-sm text-gray-500 leading-relaxed">
+              进入个人中心 → 家属绑定，输入家属借书证号及验证码即可完成绑定。绑定后可切换账号代为借阅，儿童账号自动开启分级阅读保护。
+            </div>
+          </div>
+          <div class="faq-item px-5 py-4 cursor-pointer hover:bg-gray-50" onclick="toggleFaq(this)">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-700 font-medium">没有借书证如何申请？</p>
+              <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+            </div>
+            <div class="faq-answer hidden mt-3 text-sm text-gray-500 leading-relaxed">
+              新加坡公民及永久居民可前往任意NLB图书馆，凭身份证免费办理借书证。外籍人士可申请付费会员证。办证后即可使用本平台所有功能。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+          <i class="fas fa-book text-green-600 text-sm"></i>
+          <h3 class="font-semibold text-gray-800 text-sm">借阅与归还</h3>
+        </div>
+        <div class="divide-y divide-gray-50">
+          <div class="faq-item px-5 py-4 cursor-pointer hover:bg-gray-50" onclick="toggleFaq(this)">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-700 font-medium">每次可以借多少本电子书？</p>
+              <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+            </div>
+            <div class="faq-answer hidden mt-3 text-sm text-gray-500 leading-relaxed">
+              标准会员每次最多借阅5本电子书，借阅期限为21天。可续借1次，续借后再延长21天。逾期未归还将影响借阅额度。
+            </div>
+          </div>
+          <div class="faq-item px-5 py-4 cursor-pointer hover:bg-gray-50" onclick="toggleFaq(this)">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-700 font-medium">电子书到期后会自动归还吗？</p>
+              <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+            </div>
+            <div class="faq-answer hidden mt-3 text-sm text-gray-500 leading-relaxed">
+              是的，电子书到期后系统会自动归还，无需手动操作。到期前3天和1天系统会发送提醒通知。离线下载的内容到期后将自动失效。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+          <i class="fas fa-tablet-alt text-purple-600 text-sm"></i>
+          <h3 class="font-semibold text-gray-800 text-sm">设备与推送</h3>
+        </div>
+        <div class="divide-y divide-gray-50">
+          <div class="faq-item px-5 py-4 cursor-pointer hover:bg-gray-50" onclick="toggleFaq(this)">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-700 font-medium">如何将电子书推送到Kindle？</p>
+              <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+            </div>
+            <div class="faq-answer hidden mt-3 text-sm text-gray-500 leading-relaxed">
+              1. 进入设备管理页，绑定您的Kindle邮箱地址<br>
+              2. 在书籍详情页点击"推送至Kindle"<br>
+              3. 确保Kindle已连接WiFi，书籍将在几分钟内出现在您的设备上<br>
+              注意：需先在Amazon账户中将 send@nlb-ereads.sg 加入信任发件人列表
+            </div>
+          </div>
+          <div class="faq-item px-5 py-4 cursor-pointer hover:bg-gray-50" onclick="toggleFaq(this)">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-700 font-medium">支持哪些国产阅读器？</p>
+              <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+            </div>
+            <div class="faq-answer hidden mt-3 text-sm text-gray-500 leading-relaxed">
+              目前支持文石（BOOX）、掌阅iReader、汉王、科大讯飞等主流国产阅读器。通过USB连接或WiFi传输，支持EPUB、PDF格式。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Chat & Contact -->
+    <div class="lg:col-span-2 space-y-4">
+      <!-- AI Chat -->
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+              <i class="fas fa-robot text-white text-xs"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-800">智能客服</p>
+              <p class="text-xs text-green-500 flex items-center gap-1"><span class="w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>在线</p>
+            </div>
+          </div>
+          <span class="text-xs text-gray-400">7×24小时</span>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chat-messages" class="p-4 space-y-3 min-h-[180px] max-h-64 overflow-y-auto bg-gray-50">
+          <div class="flex gap-2">
+            <div class="w-7 h-7 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-robot text-white text-xs"></i>
+            </div>
+            <div class="chat-bubble-bot px-3 py-2 text-sm max-w-xs">
+              您好！我是NLB智能客服，请问有什么可以帮助您？
+            </div>
+          </div>
+          <div class="flex gap-2 justify-end">
+            <div class="chat-bubble-user px-3 py-2 text-sm max-w-xs">
+              如何续借电子书？
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <div class="w-7 h-7 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-robot text-white text-xs"></i>
+            </div>
+            <div class="chat-bubble-bot px-3 py-2 text-sm max-w-xs">
+              续借很简单！进入"我的书架" → 找到要续借的书 → 点击"续借"按钮即可。每本书可续借1次，延长21天。
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="p-3 border-t border-gray-100 flex gap-2">
+          <input type="text" id="chat-input" placeholder="输入您的问题..." class="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+          <button id="btn-chat-send" class="w-9 h-9 bg-primary rounded-xl flex items-center justify-center hover:bg-primary-dark transition">
+            <i class="fas fa-paper-plane text-white text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Quick Questions -->
+        <div class="px-3 pb-3 flex flex-wrap gap-1.5">
+          <button class="quick-question bg-blue-50 text-primary text-xs px-3 py-1.5 rounded-full hover:bg-blue-100 transition cursor-pointer">如何借书？</button>
+          <button class="quick-question bg-blue-50 text-primary text-xs px-3 py-1.5 rounded-full hover:bg-blue-100 transition cursor-pointer">推送Kindle</button>
+          <button class="quick-question bg-blue-50 text-primary text-xs px-3 py-1.5 rounded-full hover:bg-blue-100 transition cursor-pointer">忘记密码</button>
+          <button class="quick-question bg-blue-50 text-primary text-xs px-3 py-1.5 rounded-full hover:bg-blue-100 transition cursor-pointer">续借方法</button>
+        </div>
+      </div>
+
+      <!-- Contact Options -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="font-semibold text-gray-800 text-sm mb-4">其他联系方式</h3>
+        <div class="space-y-3">
+          <button class="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition text-left">
+            <div class="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-user-headset text-green-600"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800">人工客服</p>
+              <p class="text-xs text-gray-400">工作日 9:00-18:00</p>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+          </button>
+          <button class="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition text-left">
+            <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-envelope text-primary"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800">邮件反馈</p>
+              <p class="text-xs text-gray-400">ereads@nlb.gov.sg</p>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+          </button>
+          <button class="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition text-left">
+            <div class="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-phone text-orange-500"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800">电话热线</p>
+              <p class="text-xs text-gray-400">6332 3255</p>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+          </button>
+          <button class="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition text-left">
+            <div class="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-bug text-purple-600"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800">故障申报</p>
+              <p class="text-xs text-gray-400">提交问题反馈单</p>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tutorials -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="font-semibold text-gray-800 text-sm mb-3">使用教程</h3>
+        <div class="space-y-2">
+          <a href="#" class="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition">
+            <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-play text-primary text-xs"></i>
+            </div>
+            <p class="text-sm text-gray-700">新手借阅完整教程</p>
+            <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+          </a>
+          <a href="#" class="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition">
+            <div class="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-play text-purple-600 text-xs"></i>
+            </div>
+            <p class="text-sm text-gray-700">Kindle推送设置教程</p>
+            <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+          </a>
+          <a href="#" class="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition">
+            <div class="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-play text-green-600 text-xs"></i>
+            </div>
+            <p class="text-sm text-gray-700">离线下载使用指南</p>
+            <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleFaq(el) {
+  const answer = el.querySelector('.faq-answer');
+  const icon = el.querySelector('.fa-chevron-down');
+  answer.classList.toggle('hidden');
+  icon.style.transform = answer.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+</script>
+</body>
+</html>
+<script>
+$(function(){
+  // 全局 data-nav 跳转
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+
+  // FAQ 展开/收起（覆盖 onclick）
+  $(document).on('click', '.faq-item', function(){
+    const $ans = $(this).find('.faq-answer');
+    const $icon = $(this).find('.fa-chevron-down');
+    // 关闭其他已展开的
+    $('.faq-answer').not($ans).addClass('hidden');
+    $('.fa-chevron-down').not($icon).removeClass('rotate-180');
+    $ans.toggleClass('hidden');
+    $icon.toggleClass('rotate-180');
+  });
+
+  // 搜索框
+  $('#help-search').on('input', function(){
+    const q = $(this).val().toLowerCase().trim();
+    if (!q) { $('.faq-item').show(); return; }
+    $('.faq-item').each(function(){
+      const text = $(this).text().toLowerCase();
+      $(this).toggle(text.includes(q));
+    });
+  });
+  $('#help-search').on('keypress', function(e){
+    if (e.which === 13) $(this).trigger('input');
+  });
+
+  // 快捷分类卡片 → 展开对应 FAQ
+  $(document).on('click', '.quick-help-card', function(){
+    const topic = $(this).data('topic');
+    const $target = $('.faq-item:contains("' + topic + '")').first();
+    if ($target.length) {
+      $target[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function(){
+        $target.find('.faq-answer').removeClass('hidden');
+        $target.find('.fa-chevron-down').addClass('rotate-180');
+      }, 400);
+    }
+  });
+
+  // 快捷问题气泡点击 → 填入输入框并发送
+  $(document).on('click', '.quick-question', function(){
+    const q = $(this).text().trim();
+    $('#chat-input').val(q);
+    sendChatMessage(q);
+  });
+
+  // 智能客服发送
+  $('#btn-chat-send').on('click', function(){
+    const msg = $('#chat-input').val().trim();
+    if (!msg) return;
+    sendChatMessage(msg);
+  });
+  $('#chat-input').on('keypress', function(e){
+    if (e.which === 13) $('#btn-chat-send').click();
+  });
+
+  // 人工客服 → 弹窗
+  $(document).on('click', 'button:contains("人工客服"), .contact-manual', function(){
+    showManualServiceModal();
+  });
+
+  // 教程链接 → toast 提示
+  $(document).on('click', 'a:has(.fa-play)', function(e){
+    e.preventDefault();
+    const title = $(this).find('p.text-sm').text();
+    showToast('正在加载教程：' + title);
+  });
+
+  // 故障申报
+  $(document).on('click', 'button:contains("故障申报"), button:contains("提交问题")', function(){
+    showFeedbackModal();
+  });
+
+  // 邮件反馈
+  $(document).on('click', 'button:contains("邮件反馈")', function(){
+    showToast('邮件地址已复制：ereads@nlb.gov.sg');
+  });
+
+  // 电话热线
+  $(document).on('click', 'button:contains("电话热线")', function(){
+    showToast('NLB 客服热线：6332 3255（工作日 9:00-18:00）');
+  });
+
+  // ---- 聊天逻辑 ----
+  const botReplies = {
+    '借阅': '借阅电子书很简单！在书籍详情页点击"立即借阅"即可，每本借阅期21天，可续借1次。',
+    '续借': '续借方法：进入"我的书架" → 找到要续借的书 → 点击"续借"按钮，每本书可续借1次，延长21天。',
+    '密码': '忘记密码？请点击登录页的"忘记密码"，通过手机验证码重置，或拨打热线 6332 3255 人工协助。',
+    'Kindle': '推送至Kindle：先在设备管理页绑定Kindle邮箱，然后在书籍详情页点击"推送至设备"即可。',
+    '下载': '离线下载：借阅书籍后，在书籍详情页选择EPUB或PDF格式下载，下载后可在无网络环境阅读。',
+    '注册': '办理借书证请前往任意NLB图书馆，或访问 nlb.gov.sg 在线申请，持有效证件即可免费办理。',
+    '退款': '本平台所有电子书均免费借阅，无需付费，不涉及退款问题。',
+  };
+
+  function sendChatMessage(msg){
+    const $chat = $('#chat-messages');
+    $chat.append(`<div class="flex justify-end mb-3"><div class="chat-bubble-user px-3 py-2 text-sm max-w-xs">${msg}</div></div>`);
+    $('#chat-input').val('');
+    $chat.scrollTop($chat[0].scrollHeight);
+
+    // 打字中提示
+    const $typing = $(`<div class="flex gap-2 mb-3 typing-indicator">
+      <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:#0f4c81"><i class="fas fa-robot text-white text-xs"></i></div>
+      <div class="chat-bubble-bot px-3 py-2 text-sm"><i class="fas fa-ellipsis-h text-gray-400"></i></div>
+    </div>`);
+    $chat.append($typing);
+    $chat.scrollTop($chat[0].scrollHeight);
+
+    setTimeout(function(){
+      $typing.remove();
+      let reply = '感谢您的提问！';
+      for (const [key, val] of Object.entries(botReplies)) {
+        if (msg.includes(key)) { reply = val; break; }
+      }
+      $chat.append(`<div class="flex gap-2 mb-3">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:#0f4c81"><i class="fas fa-robot text-white text-xs"></i></div>
+        <div class="chat-bubble-bot px-3 py-2 text-sm max-w-xs">${reply}</div>
+      </div>`);
+      $chat.scrollTop($chat[0].scrollHeight);
+    }, 900);
+  }
+
+  function showManualServiceModal(){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-user-headset text-primary text-sm"></i>联系人工客服
+          </h3>
+          <div class="space-y-3 mb-5">
+            <div class="bg-gray-50 rounded-xl p-3">
+              <p class="text-xs text-gray-500">服务时间</p>
+              <p class="text-sm font-medium text-gray-800 mt-0.5">工作日 9:00 - 18:00</p>
+            </div>
+            <div class="bg-gray-50 rounded-xl p-3">
+              <p class="text-xs text-gray-500">预计等待</p>
+              <p class="text-sm font-medium text-green-600 mt-0.5">约 3 分钟</p>
+            </div>
+          </div>
+          <textarea class="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 mb-4" rows="3" placeholder="请简述您的问题，方便客服快速处理..."></textarea>
+          <div class="flex gap-3">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-connect flex-1 py-2.5 text-white rounded-xl text-sm font-medium" style="background:#0f4c81">接入客服</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-connect').on('click', function(){
+      $modal.remove();
+      showToast('正在为您接入人工客服，请稍候...');
+    });
+  }
+
+  function showFeedbackModal(){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-bug text-purple-500 text-sm"></i>故障申报
+          </h3>
+          <div class="mb-3">
+            <label class="text-xs text-gray-500 mb-1 block">问题类型</label>
+            <select class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
+              <option>登录问题</option><option>借阅失败</option><option>推送异常</option><option>下载错误</option><option>其他</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="text-xs text-gray-500 mb-1 block">问题描述</label>
+            <textarea class="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20" rows="3" placeholder="请详细描述遇到的问题..."></textarea>
+          </div>
+          <div class="flex gap-3">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-submit flex-1 py-2.5 text-white rounded-xl text-sm font-medium" style="background:#0f4c81">提交反馈</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-submit').on('click', function(){
+      $modal.remove();
+      showToast('反馈已提交，工单编号：#NLB' + Math.floor(Math.random()*90000+10000));
+    });
+  }
+
+  function showToast(msg){
+    const $t = $('<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg z-50 whitespace-nowrap">' + msg + '</div>');
+    $('body').append($t);
+    setTimeout(function(){ $t.fadeOut(300, function(){ $(this).remove(); }); }, 2500);
+  }
+});
+</script>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI客服 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#0f4c81'},fontFamily:{sans:['Inter','sans-serif']}}}}</script>
+<style>
+  *{box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:#f8fafc;margin:0;}
+  /* ── Chat Widget ── */
+  #chat-widget{
+    position:fixed;bottom:24px;right:24px;
+    width:380px;height:580px;
+    display:flex;flex-direction:column;
+    border-radius:20px;overflow:hidden;
+    box-shadow:0 24px 64px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.06);
+    z-index:9999;
+    animation:slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .chat-header{background:linear-gradient(135deg,#0f4c81,#1a6bb5);padding:14px 16px;flex-shrink:0;}
+  .chat-body{flex:1;overflow-y:auto;background:#f1f5f9;padding:14px;scroll-behavior:smooth;}
+  .chat-chips{background:#fff;border-top:1px solid #f1f5f9;padding:8px 10px;
+    display:flex;gap:6px;overflow-x:auto;flex-shrink:0;}
+  .chat-chips::-webkit-scrollbar{display:none;}
+  .chat-input-bar{background:#fff;border-top:1px solid #f1f5f9;padding:10px 12px;
+    display:flex;gap:8px;align-items:flex-end;flex-shrink:0;}
+  /* ── Bubbles ── */
+  .bubble-ai{background:#fff;border:1px solid #e2e8f0;
+    border-radius:4px 14px 14px 14px;padding:9px 13px;
+    font-size:13px;color:#374151;line-height:1.65;max-width:88%;}
+  .bubble-user{background:#0f4c81;color:#fff;
+    border-radius:14px 4px 14px 14px;padding:9px 13px;
+    font-size:13px;line-height:1.65;max-width:88%;}
+  /* ── Typing ── */
+  .typing-dot{width:6px;height:6px;border-radius:50%;background:#94a3b8;
+    animation:tdot 1.2s infinite;}
+  .typing-dot:nth-child(2){animation-delay:.2s;}
+  .typing-dot:nth-child(3){animation-delay:.4s;}
+  @keyframes tdot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+  /* ── Chip ── */
+  .chip{border:1px solid #cbd5e1;border-radius:20px;padding:5px 11px;
+    font-size:11px;color:#475569;cursor:pointer;white-space:nowrap;
+    background:#fff;transition:all .15s;flex-shrink:0;}
+  .chip:hover{border-color:#0f4c81;color:#0f4c81;background:#eff6ff;}
+  /* ── FAB (minimized) ── */
+  #chat-fab{position:fixed;bottom:24px;right:24px;z-index:9999;display:none;}
+  #chat-fab button{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#0f4c81,#1a6bb5);
+    box-shadow:0 6px 24px rgba(15,76,129,0.5);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .2s;}
+  #chat-fab button:hover{transform:scale(1.08);}
+  .unread-dot{position:absolute;top:2px;right:2px;width:12px;height:12px;
+    background:#f97316;border-radius:50%;border:2px solid #fff;}
+  /* ── Overlay ── */
+  #bg-overlay{position:fixed;inset:0;background:rgba(15,23,42,.25);
+    backdrop-filter:blur(3px);z-index:9990;}
+</style>
+</head>
+<body>
+
+<!-- Background overlay -->
+<div id="bg-overlay"></div>
+
+<!-- Simulated background page -->
+<div style="pointer-events:none;user-select:none;">
+  <nav style="background:#fff;box-shadow:0 2px 20px rgba(15,76,129,.08);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;">
+    <div style="width:28px;height:28px;background:#0f4c81;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <i class="fas fa-book-open" style="color:#fff;font-size:11px;"></i>
+    </div>
+    <span style="font-weight:700;color:#0f4c81;font-size:14px;">NLB eReads</span>
+    <div style="flex:1;max-width:400px;background:#f1f5f9;border-radius:12px;height:34px;margin:0 16px;"></div>
+  </nav>
+  <div style="max-width:900px;margin:24px auto;padding:0 24px;">
+    <div style="background:linear-gradient(135deg,#0f4c81,#1a6bb5,#0e7490);border-radius:16px;height:140px;margin-bottom:20px;opacity:.55;"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+      <div style="background:#fff;border-radius:14px;height:90px;opacity:.45;"></div>
+      <div style="background:#fff;border-radius:14px;height:90px;opacity:.45;"></div>
+      <div style="background:#fff;border-radius:14px;height:90px;opacity:.45;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+      <div style="background:#fff;border-radius:14px;height:160px;opacity:.35;"></div>
+      <div style="background:#fff;border-radius:14px;height:160px;opacity:.35;"></div>
+      <div style="background:#fff;border-radius:14px;height:160px;opacity:.35;"></div>
+      <div style="background:#fff;border-radius:14px;height:160px;opacity:.35;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Chat Widget ── -->
+<div id="chat-widget">
+
+  <!-- Header -->
+  <div class="chat-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-robot" style="color:#fff;font-size:16px;"></i>
+      </div>
+      <div style="flex:1;">
+        <p style="color:#fff;font-weight:600;font-size:14px;margin:0;">NLB 智能客服</p>
+        <p style="color:rgba(255,255,255,.75);font-size:11px;margin:2px 0 0;display:flex;align-items:center;gap:4px;">
+          <span style="width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;"></span>在线 · 通常即时回复
+        </p>
+      </div>
+      <button id="btn-minimize" title="最小化" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.7);padding:5px 7px;border-radius:6px;">
+        <i class="fas fa-minus" style="font-size:11px;"></i>
+      </button>
+      <button id="btn-close" title="关闭" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.7);padding:5px 7px;border-radius:6px;">
+        <i class="fas fa-times" style="font-size:13px;"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-body" id="chat-body">
+    <div id="msg-list" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0f4c81,#1a6bb5);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+          <i class="fas fa-robot" style="color:#fff;font-size:11px;"></i>
+        </div>
+        <div>
+          <div class="bubble-ai">您好！我是 NLB eReads 智能客服 📚<br><br>我可以帮您解答借阅、续借、推送、账号等各类问题，请问有什么可以帮到您？</div>
+          <p style="font-size:10px;color:#94a3b8;margin:4px 0 0 4px;">刚刚</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Chips -->
+  <div class="chat-chips">
+    <button class="chip" data-q="如何借阅电子书？">如何借阅？</button>
+    <button class="chip" data-q="如何续借书籍？">如何续借？</button>
+    <button class="chip" data-q="如何推送到Kindle？">推送Kindle</button>
+    <button class="chip" data-q="借阅额度是多少？">借阅额度</button>
+    <button class="chip" data-q="忘记借书证号怎么办？">忘记证号</button>
+    <button class="chip" data-q="支持哪些阅读器？">支持设备</button>
+    <button class="chip" data-q="逾期会有罚款吗？">逾期政策</button>
+  </div>
+
+  <!-- Input Bar -->
+  <div class="chat-input-bar">
+    <textarea id="chat-input" rows="1"
+      style="flex:1;resize:none;border:1px solid #e2e8f0;border-radius:14px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;max-height:90px;"
+      placeholder="输入您的问题..."
+      onfocus="this.style.borderColor='#0f4c81'"
+      onblur="this.style.borderColor='#e2e8f0'"></textarea>
+    <button id="btn-send" style="width:36px;height:36px;border-radius:50%;background:#0f4c81;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="fas fa-paper-plane" style="color:#fff;font-size:12px;"></i>
+    </button>
+  </div>
+
+</div>
+
+<!-- FAB (minimized) -->
+<div id="chat-fab">
+  <button id="btn-reopen" style="position:relative;">
+    <i class="fas fa-robot" style="color:#fff;font-size:22px;"></i>
+    <span class="unread-dot" id="unread-dot" style="display:none;"></span>
+  </button>
+</div>
+
+<script>
+const ANSWERS = {
+  '借阅': '每位持有效借书证的会员可同时借阅最多 <strong>8本</strong> 电子书，每本借阅期 <strong>21天</strong>，可续借1次。<br><br>操作步骤：<br>① 搜索页找到书籍 → 点击封面<br>② 书籍详情页点击「立即借阅」<br>③ 借阅成功后可在「我的书架」查看',
+  '额度': '您的借阅额度为 <strong>8本/次</strong>，当前已借 3 本，剩余 5 本。<br><br>可在「我的书架」实时查看借阅状态与剩余额度。',
+  '续借': '续借步骤：<br>① 进入「我的书架 → 借阅中」<br>② 找到书籍，点击「续借」按钮<br>③ 借阅期自动延长 <strong>21天</strong><br><br>⚠️ 每本书最多续借 <strong>1次</strong>，请在到期前操作。',
+  '推送': '推送至 Kindle 步骤：<br>① 「设备管理」页绑定 Kindle 邮箱<br>② 书籍详情页点击「推送至设备」<br>③ 选择 Kindle，点击「开始推送」<br><br>如推送失败，请将 <strong>nlb@ereads.sg</strong> 加入 Kindle 信任发件人。',
+  'Kindle': '推送至 Kindle 步骤：<br>① 「设备管理」页绑定 Kindle 邮箱<br>② 书籍详情页点击「推送至设备」<br>③ 选择 Kindle，点击「开始推送」<br><br>如推送失败，请将 <strong>nlb@ereads.sg</strong> 加入 Kindle 信任发件人。',
+  '借书证': '忘记借书证号，可通过以下方式找回：<br>① 登录 NLB Mobile App 查看<br>② 拨打客服热线 <strong>6332 3255</strong><br>③ 携带身份证前往任意 NLB 图书馆柜台查询',
+  '阅读器': '目前支持以下阅读器：<br>• <strong>Kindle</strong>（MOBI/AZW3）<br>• <strong>Kobo</strong>（EPUB）<br>• <strong>文石 BOOX</strong>（EPUB/PDF）<br>• <strong>掌阅 iReader</strong>（EPUB/TXT）<br><br>在「设备管理」最多可绑定 <strong>3台</strong> 设备。',
+  '下载': '借阅成功后，在书籍详情页选择 EPUB 或 PDF 格式下载。<br>已下载书籍可在「我的书架 → 离线下载」中管理，最多可存储 <strong>5GB</strong>。',
+  '格式': '支持格式：<br>• <strong>EPUB</strong> — Kobo、文石等阅读器<br>• <strong>MOBI</strong> — Kindle<br>• <strong>PDF</strong> — 平板/电脑<br><br>系统会根据绑定设备自动推荐最佳格式。',
+  '逾期': 'NLB 电子书借阅期满后系统将<strong>自动归还</strong>，不产生逾期罚款。<br><br>建议开启到期提醒通知，避免忘记续借。',
+  '罚款': 'NLB 电子书借阅期满后系统将<strong>自动归还</strong>，不产生逾期罚款。',
+  '注册': '办理借书证：<br>• <strong>线下</strong>：携带 NRIC/FIN/护照前往任意 NLB 图书馆，即时免费办理<br>• <strong>线上</strong>：访问 NLB 官网在线申请，1-3个工作日审核',
+  '免费': '是的，完全免费！持有效新加坡图书馆借书证即可免费借阅平台所有 50,000+ 本正版电子书。',
+  '语言': '平台支持 <strong>4种语言</strong>：中文、English、Malay、Tamil，共收录 50,000+ 正版电子书。',
+};
+const DEFAULT = '感谢您的提问！这个问题我需要进一步确认。<br><br>您可以通过以下方式获得帮助：<br>① 客服热线：<strong>6332 3255</strong>（每日 10:00–21:00）<br>② 邮件：<strong>enquiry@nlb.gov.sg</strong><br>③ 前往任意 NLB 图书馆咨询<br><br>还有其他问题吗？';
+
+function getAnswer(q) {
+  const t = q.toLowerCase();
+  for (const [k, v] of Object.entries(ANSWERS)) {
+    if (t.includes(k.toLowerCase())) return v;
+  }
+  return DEFAULT;
+}
+function timeStr() {
+  const d = new Date();
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+function aiAvatar() {
+  return `<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0f4c81,#1a6bb5);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;"><i class="fas fa-robot" style="color:#fff;font-size:11px;"></i></div>`;
+}
+function userAvatar() {
+  return `<div style="width:28px;height:28px;border-radius:50%;background:#0f4c81;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;"><span style="color:#fff;font-size:10px;font-weight:700;">陈</span></div>`;
+}
+function appendUser(text) {
+  $('#msg-list').append(`<div style="display:flex;align-items:flex-start;gap:8px;justify-content:flex-end;">
+    <div><div class="bubble-user">${text}</div><p style="font-size:10px;color:#94a3b8;margin:4px 4px 0 0;text-align:right;">${timeStr()}</p></div>
+    ${userAvatar()}</div>`);
+  scrollBottom();
+}
+function appendTyping() {
+  $('#msg-list').append(`<div style="display:flex;align-items:flex-start;gap:8px;" id="typing-ind">
+    ${aiAvatar()}
+    <div class="bubble-ai" style="display:flex;align-items:center;gap:5px;padding:12px 14px;">
+      <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+    </div></div>`);
+  scrollBottom();
+}
+function appendAI(html) {
+  $('#typing-ind').remove();
+  $('#msg-list').append(`<div style="display:flex;align-items:flex-start;gap:8px;">
+    ${aiAvatar()}
+    <div><div class="bubble-ai">${html}</div><p style="font-size:10px;color:#94a3b8;margin:4px 0 0 4px;">${timeStr()}</p></div>
+  </div>`);
+  scrollBottom();
+}
+function scrollBottom() {
+  const el = document.getElementById('chat-body');
+  el.scrollTop = el.scrollHeight;
+}
+function send(text) {
+  text = text.trim();
+  if (!text) return;
+  $('#chat-input').val('').css('height','');
+  appendUser(text);
+  appendTyping();
+  setTimeout(() => appendAI(getAnswer(text)), 800 + Math.random() * 500);
+}
+
+$(function () {
+  $('#btn-send').on('click', () => send($('#chat-input').val()));
+  $('#chat-input').on('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send($(this).val()); }
+  }).on('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 90) + 'px';
+  });
+  $(document).on('click', '.chip', function () { send($(this).data('q')); });
+
+  $('#btn-minimize').on('click', function () {
+    $('#chat-widget').hide();
+    $('#bg-overlay').hide();
+    $('#chat-fab').show();
+  });
+  $('#btn-reopen').on('click', function () {
+    $('#chat-fab').hide();
+    $('#bg-overlay').show();
+    $('#chat-widget').show();
+    $('#unread-dot').hide();
+    scrollBottom();
+  });
+  $('#btn-close').on('click', function () { navigateTo('home'); });
+  $('#bg-overlay').on('click', function () {
+    $('#chat-widget').hide();
+    $('#bg-overlay').hide();
+    $('#chat-fab').show();
+    $('#unread-dot').show();
+  });
+  $(document).on('click', '[data-nav]', function (e) {
+    e.preventDefault();
+    navigateTo($(this).data('nav'));
+  });
+});
+</script>
+</body>
+</html>

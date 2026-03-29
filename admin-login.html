@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="admin.login.title">管理员登录 - NLB eReads Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', 'primary-dark': '#0a3560' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .bg-gradient-admin { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+  .login-card { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+</style>
+<script src="nav.js"></script>
+<script src="i18n.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-admin flex items-center justify-center p-4">
+
+<div class="w-full max-w-md">
+  <!-- Logo -->
+  <div class="text-center mb-8 text-white">
+    <div class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20">
+      <i class="fas fa-shield-alt text-3xl text-blue-400"></i>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight">NLB eReads Admin</h1>
+    <p class="text-gray-400 text-sm mt-2" data-i18n="admin.login.subtitle">国家图书馆电子阅读平台后台管理</p>
+  </div>
+
+  <!-- Login Form -->
+  <div class="bg-white rounded-3xl p-8 login-card">
+    <h2 class="text-xl font-bold text-gray-800 mb-6 text-center" data-i18n="admin.login.title">管理员登录</h2>
+
+    <form id="admin-login-form" onsubmit="event.preventDefault();">
+      <div class="space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5" data-i18n="admin.login.account">管理员账号</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <i class="fas fa-user text-gray-400"></i>
+            </div>
+            <input type="text" id="admin-id" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" data-i18n-placeholder="admin.login.account.placeholder" placeholder="请输入管理员账号" value="admin" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5" data-i18n="admin.login.pwd">密码</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <i class="fas fa-lock text-gray-400"></i>
+            </div>
+            <input type="password" id="admin-pwd" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" data-i18n-placeholder="admin.login.pwd.placeholder" placeholder="请输入密码" value="123456" required>
+            <button type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none" onclick="togglePassword()">
+              <i class="fas fa-eye" id="toggle-pwd-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+            <span class="text-sm text-gray-600" data-i18n="admin.login.remember">记住我</span>
+          </label>
+          <a href="#" class="text-sm text-primary hover:underline" data-i18n="admin.login.forgot">忘记密码？</a>
+        </div>
+
+        <button type="submit" id="btn-login" class="w-full py-3.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-primary/30 flex items-center justify-center">
+          <span data-i18n="admin.login.btn">登录后台系统</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Back to site -->
+  <div class="text-center mt-8">
+    <a href="#" data-nav="login" class="text-sm text-gray-400 hover:text-white transition flex items-center justify-center gap-2">
+      <i class="fas fa-arrow-left"></i> <span data-i18n="admin.login.back">返回用户端登录</span>
+    </a>
+  </div>
+</div>
+
+<script>
+function togglePassword() {
+  const pwdInput = document.getElementById('admin-pwd');
+  const icon = document.getElementById('toggle-pwd-icon');
+  if (pwdInput.type === 'password') {
+    pwdInput.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    pwdInput.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+
+$(function() {
+  // 全局 data-nav 跳转
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+});
+</script>
+<script src="admin-login-integration.js"></script>
+</body>
+</html>

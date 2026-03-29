@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="admin.nav.borrows">借阅记录 - NLB Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', 'primary-dark': '#0a3560' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .sidebar { background: #0f172a; width: 240px; transition: all 0.3s; }
+  .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+  .sidebar-link:hover { background: #1e293b; color: #fff; }
+  .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
+  .main-content { background: #f8fafc; flex: 1; height: 100vh; overflow-y: auto; }
+  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 40; }
+  .table-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden; }
+</style>
+<script src="nav.js"></script>
+<script src="i18n.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<aside class="sidebar flex-shrink-0 flex flex-col h-screen">
+  <div class="h-16 flex items-center gap-3 px-6 border-b border-gray-800">
+    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+      <i class="fas fa-shield-alt text-white text-sm"></i>
+    </div>
+    <span class="text-white font-bold tracking-wide">NLB Admin</span>
+  </div>
+
+  <nav class="flex-1 py-4 space-y-1">
+    <a href="#" class="sidebar-link" data-nav="admin-dashboard">
+      <i class="fas fa-chart-line w-5 text-center"></i>
+      <span data-i18n="admin.nav.dashboard">管理大盘</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-books">
+      <i class="fas fa-book w-5 text-center"></i>
+      <span data-i18n="admin.nav.books">书籍管理</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-users">
+      <i class="fas fa-users w-5 text-center"></i>
+      <span data-i18n="admin.nav.users">用户管理</span>
+    </a>
+    <a href="#" class="sidebar-link active" data-nav="admin-borrows">
+      <i class="fas fa-exchange-alt w-5 text-center"></i>
+      <span data-i18n="admin.nav.borrows">借阅记录</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-notices">
+      <i class="fas fa-bullhorn w-5 text-center"></i>
+      <span data-i18n="admin.nav.notices">系统公告</span>
+    </a>
+  </nav>
+
+  <div class="p-4 border-t border-gray-800">
+    <button class="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition" data-nav="admin-login">
+      <i class="fas fa-sign-out-alt"></i> <span data-i18n="admin.logout">退出登录</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content flex flex-col">
+  <header class="top-header">
+    <div class="flex items-center gap-4">
+      <h1 class="text-lg font-semibold text-gray-800" data-i18n="admin.borrows.title">全站借阅记录</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">A</div>
+    </div>
+  </header>
+
+  <div class="p-6">
+    <!-- Toolbar -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
+      <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+        <div class="relative flex-1 sm:w-64">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input type="text" id="search-input" data-i18n-placeholder="admin.borrows.search.placeholder" placeholder="搜索书名、用户名、借书证..." class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+        </div>
+        <select id="filter-status" class="py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 outline-none focus:ring-2 focus:ring-primary/20">
+          <option value="all" data-i18n="admin.borrows.filter.status">全部状态</option>
+          <option value="borrowing">借阅中</option>
+          <option value="returned">已归还</option>
+          <option value="overdue">已逾期</option>
+        </select>
+        <div class="flex items-center gap-2 border border-gray-200 bg-white rounded-xl px-3 py-1.5 text-sm text-gray-600">
+          <i class="fas fa-calendar-alt text-gray-400"></i>
+          <input type="date" class="border-none outline-none text-sm text-gray-600 bg-transparent" value="2026-03-01">
+          <span class="text-gray-300">-</span>
+          <input type="date" class="border-none outline-none text-sm text-gray-600 bg-transparent" value="2026-03-25">
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left whitespace-nowrap">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider font-semibold">
+              <th class="px-6 py-4" data-i18n="admin.borrows.col.id">订单编号</th>
+              <th class="px-6 py-4" data-i18n="admin.borrows.col.user">借阅人</th>
+              <th class="px-6 py-4" data-i18n="admin.borrows.col.book">借阅书籍</th>
+              <th class="px-6 py-4" data-i18n="admin.borrows.col.time">起止时间</th>
+              <th class="px-6 py-4" data-i18n="admin.borrows.col.renew">续借</th>
+              <th class="px-6 py-4 text-center" data-i18n="admin.borrows.col.status">当前状态</th>
+              <th class="px-6 py-4 text-right" data-i18n="admin.books.col.action">操作</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm" id="borrows-tbody">
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4 text-gray-500 font-mono text-xs">BRW-20260325-001</td>
+              <td class="px-6 py-4">
+                <p class="font-medium text-gray-800">陈小明</p>
+                <p class="text-xs text-gray-400">S1234567A</p>
+              </td>
+              <td class="px-6 py-4">
+                <p class="font-medium text-gray-800 text-primary hover:underline cursor-pointer">新加坡史</p>
+              </td>
+              <td class="px-6 py-4">
+                <p class="text-gray-700">2026-03-25</p>
+                <p class="text-xs text-gray-400">至 2026-04-15</p>
+              </td>
+              <td class="px-6 py-4 text-center text-gray-500">0 / 2</td>
+              <td class="px-6 py-4 text-center">
+                <span class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-xs font-medium border border-blue-100">借阅中 (剩21天)</span>
+              </td>
+              <td class="px-6 py-4 text-right whitespace-nowrap">
+                <button class="text-red-500 hover:text-red-700 font-medium text-xs border border-red-200 bg-red-50 px-3 py-1.5 rounded-lg" onclick="forceReturn()">强制归还</button>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4 text-gray-500 font-mono text-xs">BRW-20260310-042</td>
+              <td class="px-6 py-4">
+                <p class="font-medium text-gray-800">林丽丽</p>
+                <p class="text-xs text-gray-400">S7654321B</p>
+              </td>
+              <td class="px-6 py-4">
+                <p class="font-medium text-gray-800 text-primary hover:underline cursor-pointer">三体</p>
+              </td>
+              <td class="px-6 py-4">
+                <p class="text-gray-700">2026-03-10</p>
+                <p class="text-xs text-gray-400">于 2026-03-24 还</p>
+              </td>
+              <td class="px-6 py-4 text-center text-gray-500">0 / 2</td>
+              <td class="px-6 py-4 text-center">
+                <span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full text-xs font-medium border border-gray-200">已归还</span>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <button class="text-gray-400 hover:text-primary transition font-medium text-xs px-2" disabled>无操作</button>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-gray-50 transition bg-red-50/20">
+              <td class="px-6 py-4 text-gray-500 font-mono text-xs">BRW-20260215-088</td>
+              <td class="px-6 py-4">
+                <p class="font-medium text-gray-800">John Doe</p>
+                <p class="text-xs text-gray-400">G1122334C</p>
+              </td>
+              <td class="px-6 py-4">
+                <p class="font-medium text-gray-800 text-primary hover:underline cursor-pointer">Atomic Habits</p>
+              </td>
+              <td class="px-6 py-4">
+                <p class="text-gray-700">2026-02-15</p>
+                <p class="text-xs text-red-500 font-medium">应于 2026-03-08</p>
+              </td>
+              <td class="px-6 py-4 text-center text-gray-500">2 / 2</td>
+              <td class="px-6 py-4 text-center">
+                <span class="bg-red-50 text-red-600 px-2.5 py-1 rounded-full text-xs font-medium border border-red-200"><i class="fas fa-exclamation-circle mr-1"></i>逾期17天</span>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <button class="text-white bg-red-500 hover:bg-red-600 transition font-medium text-xs px-3 py-1.5 rounded-lg" onclick="alert('催还邮件已发送给该用户')">发送催款单</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+        <span class="text-sm text-gray-500" id="borrows-total">共 182,403 条记录，当前显示 1-3 条</span>
+        <div class="flex items-center gap-1">
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-400 flex items-center justify-center cursor-not-allowed"><i class="fas fa-chevron-left text-xs"></i></button>
+          <button class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center text-sm font-medium">1</button>
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center text-sm">2</button>
+          <span class="px-1 text-gray-400">...</span>
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center"><i class="fas fa-chevron-right text-xs"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+$(function() {
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+});
+</script>
+<script src="admin-borrows-integration.js"></script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="admin.nav.dashboard">管理大盘 - NLB Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', 'primary-dark': '#0a3560' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .sidebar { background: #0f172a; width: 240px; transition: all 0.3s; }
+  .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+  .sidebar-link:hover { background: #1e293b; color: #fff; }
+  .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
+  .main-content { background: #f8fafc; flex: 1; height: 100vh; overflow-y: auto; }
+  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 40; }
+  .stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; display: flex; flex-direction: column; }
+</style>
+<script src="nav.js"></script>
+<script src="i18n.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<aside class="sidebar flex-shrink-0 flex flex-col h-screen">
+  <!-- Brand -->
+  <div class="h-16 flex items-center gap-3 px-6 border-b border-gray-800">
+    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+      <i class="fas fa-shield-alt text-white text-sm"></i>
+    </div>
+    <span class="text-white font-bold tracking-wide">NLB Admin</span>
+  </div>
+
+  <!-- Nav Links -->
+  <nav class="flex-1 py-4 space-y-1">
+    <a href="#" class="sidebar-link active" data-nav="admin-dashboard">
+      <i class="fas fa-chart-line w-5 text-center"></i>
+      <span data-i18n="admin.nav.dashboard">管理大盘</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-books">
+      <i class="fas fa-book w-5 text-center"></i>
+      <span data-i18n="admin.nav.books">书籍管理</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-users">
+      <i class="fas fa-users w-5 text-center"></i>
+      <span data-i18n="admin.nav.users">用户管理</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-borrows">
+      <i class="fas fa-exchange-alt w-5 text-center"></i>
+      <span data-i18n="admin.nav.borrows">借阅记录</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-notices">
+      <i class="fas fa-bullhorn w-5 text-center"></i>
+      <span data-i18n="admin.nav.notices">系统公告</span>
+    </a>
+  </nav>
+
+  <!-- User profile & Logout -->
+  <div class="p-4 border-t border-gray-800">
+    <div class="flex items-center gap-3 mb-4 px-2">
+      <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">Admin</div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-white truncate">超级管理员</p>
+        <p class="text-xs text-gray-400 truncate">admin@nlb.gov.sg</p>
+      </div>
+    </div>
+    <button class="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition" data-nav="admin-login">
+      <i class="fas fa-sign-out-alt"></i> <span data-i18n="admin.logout">退出登录</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content flex flex-col">
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="flex items-center gap-4">
+      <button class="text-gray-400 hover:text-gray-600 lg:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
+      <h1 class="text-lg font-semibold text-gray-800" data-i18n="admin.nav.dashboard">管理大盘</h1>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="relative hidden sm:block">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input type="text" data-i18n-placeholder="admin.search.placeholder" placeholder="搜索书籍、用户、记录..." class="pl-9 pr-4 py-1.5 bg-gray-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 w-64 transition-all">
+      </div>
+      <button class="relative p-2 text-gray-400 hover:text-primary transition">
+        <i class="fas fa-bell"></i>
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+      </button>
+      <button class="flex items-center gap-2 text-gray-600 hover:text-primary transition text-sm font-medium" data-nav="login">
+        <i class="fas fa-external-link-alt"></i> <span data-i18n="admin.back.to.site">前台</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Dashboard Content -->
+  <div class="p-6 space-y-6">
+
+    <!-- Welcome Banner -->
+    <div class="bg-gradient-to-r from-blue-600 to-primary rounded-2xl p-6 text-white shadow-lg flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-bold mb-1" data-i18n="admin.dash.welcome">欢迎回来，管理员</h2>
+        <p class="text-blue-100 text-sm" id="dash-welcome-sub">今天有 124 本新借阅记录，系统运行平稳。</p>
+      </div>
+      <div class="hidden md:block">
+        <i class="fas fa-chart-pie text-6xl text-white/20"></i>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm font-medium text-gray-500" data-i18n="admin.dash.stat.books">总书籍数量</p>
+          <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <i class="fas fa-book text-sm"></i>
+          </div>
+        </div>
+        <p class="text-3xl font-bold text-gray-800" id="stat-total-books">45,231</p>
+      </div>
+
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm font-medium text-gray-500" data-i18n="admin.dash.stat.users">注册用户数</p>
+          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <i class="fas fa-users text-sm"></i>
+          </div>
+        </div>
+        <p class="text-3xl font-bold text-gray-800" id="stat-total-users">12,845</p>
+      </div>
+
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm font-medium text-gray-500" data-i18n="admin.dash.stat.borrows">今日借阅量</p>
+          <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <i class="fas fa-exchange-alt text-sm"></i>
+          </div>
+        </div>
+        <p class="text-3xl font-bold text-gray-800" id="stat-today-borrows">842</p>
+      </div>
+
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm font-medium text-gray-500" data-i18n="admin.dash.stat.overdue">逾期未还</p>
+          <div class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+            <i class="fas fa-exclamation-triangle text-sm"></i>
+          </div>
+        </div>
+        <p class="text-3xl font-bold text-gray-800" id="stat-overdue">156</p>
+      </div>
+    </div>
+
+    <!-- Main Content Area: Charts & Tables -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Recent Borrowings (Takes up 2 columns) -->
+      <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="font-semibold text-gray-800" data-i18n="admin.dash.recent">最新借阅动态</h3>
+          <button class="text-sm text-primary hover:underline font-medium" data-nav="admin-borrows" data-i18n="admin.dash.recent.all">查看全部</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                <th class="px-6 py-3 font-medium" data-i18n="admin.borrows.col.book">书籍</th>
+                <th class="px-6 py-3 font-medium" data-i18n="admin.borrows.col.user">借阅人</th>
+                <th class="px-6 py-3 font-medium" data-i18n="admin.borrows.col.time">借阅时间</th>
+                <th class="px-6 py-3 font-medium" data-i18n="admin.borrows.col.status">状态</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-sm" id="recent-borrows-tbody">
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded"></div>
+                    <span class="font-medium text-gray-800">新加坡史</span>
+                  </div>
+                </td>
+                <td class="px-6 py-3 text-gray-600">陈小明 <span class="text-xs text-gray-400 block">S1234567A</span></td>
+                <td class="px-6 py-3 text-gray-600">10分钟前</td>
+                <td class="px-6 py-3"><span class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-xs font-medium">借阅中</span></td>
+              </tr>
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-10 bg-gradient-to-br from-purple-600 to-purple-800 rounded"></div>
+                    <span class="font-medium text-gray-800">三体</span>
+                  </div>
+                </td>
+                <td class="px-6 py-3 text-gray-600">林丽丽 <span class="text-xs text-gray-400 block">S7654321B</span></td>
+                <td class="px-6 py-3 text-gray-600">1小时前</td>
+                <td class="px-6 py-3"><span class="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium">已归还</span></td>
+              </tr>
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-10 bg-gradient-to-br from-orange-600 to-orange-800 rounded"></div>
+                    <span class="font-medium text-gray-800">Atomic Habits</span>
+                  </div>
+                </td>
+                <td class="px-6 py-3 text-gray-600">John Doe <span class="text-xs text-gray-400 block">G1122334C</span></td>
+                <td class="px-6 py-3 text-gray-600">昨天</td>
+                <td class="px-6 py-3"><span class="bg-red-50 text-red-600 px-2.5 py-1 rounded-full text-xs font-medium">逾期</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-100">
+          <h3 class="font-semibold text-gray-800" data-i18n="admin.dash.quick">快捷操作</h3>
+        </div>
+        <div class="p-6 space-y-4 flex-1">
+          <button class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-primary hover:shadow-md transition group bg-white" data-nav="admin-books">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition">
+                <i class="fas fa-plus"></i>
+              </div>
+              <div class="text-left">
+                <p class="text-sm font-semibold text-gray-800" data-i18n="admin.dash.quick.add_book">录入新书</p>
+                <p class="text-xs text-gray-400" data-i18n="admin.dash.quick.add_book.desc">添加电子书资源</p>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300"></i>
+          </button>
+
+          <button class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-500 hover:shadow-md transition group bg-white" data-nav="admin-users">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition">
+                <i class="fas fa-user-plus"></i>
+              </div>
+              <div class="text-left">
+                <p class="text-sm font-semibold text-gray-800" data-i18n="admin.dash.quick.approve">审批用户</p>
+                <p class="text-xs text-gray-400" data-i18n="admin.dash.quick.approve.desc">3条待审批注册</p>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300"></i>
+          </button>
+
+          <button class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-amber-500 hover:shadow-md transition group bg-white" data-nav="admin-notices">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition">
+                <i class="fas fa-bullhorn"></i>
+              </div>
+              <div class="text-left">
+                <p class="text-sm font-semibold text-gray-800" data-i18n="admin.dash.quick.notice">发布公告</p>
+                <p class="text-xs text-gray-400" data-i18n="admin.dash.quick.notice.desc">系统维护/活动推送</p>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+$(function() {
+  // 全局 data-nav 跳转
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+});
+</script>
+<script src="admin-dashboard-integration.js"></script>
+</body>
+</html>

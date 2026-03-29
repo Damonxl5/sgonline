@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>搜索浏览 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#0f4c81',accent:'#f97316'},fontFamily:{sans:['Inter','sans-serif']}}}}</script>
+<style>
+  body{font-family:'Inter',sans-serif;background:#f8fafc;}
+  .nav-shadow{box-shadow:0 2px 20px rgba(15,76,129,0.08);}
+  .card-hover{transition:all 0.2s;cursor:pointer;}
+  .card-hover:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(15,76,129,0.12);}
+  .scrollbar-hide::-webkit-scrollbar{display:none;}
+  .status-available{background:#dcfce7;color:#16a34a;}
+  .status-borrowed{background:#fee2e2;color:#dc2626;}
+  .status-reserve{background:#fef9c3;color:#ca8a04;}
+  .filter-active{background:#0f4c81;color:#fff;}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Nav -->
+<nav class="bg-white nav-shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
+    <a class="flex items-center gap-2 flex-shrink-0 cursor-pointer" data-nav="home">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#0f4c81">
+        <i class="fas fa-book-open text-white text-xs"></i>
+      </div>
+      <span class="font-bold hidden sm:block" style="color:#0f4c81">NLB eReads</span>
+    </a>
+    <div class="flex-1 max-w-2xl">
+      <div class="relative">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input id="search-input" type="text" value="新加坡历史" class="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:bg-white transition">
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="p-2 text-gray-500 hover:text-primary"><i class="fas fa-bell"></i></button>
+      <div class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer" style="background:#0f4c81" data-nav="profile">
+        <span class="text-white text-xs font-bold user-avatar-initial"></span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 py-5 flex gap-5 min-w-0">
+  <!-- Sidebar -->
+  <aside class="w-56 flex-shrink-0 hidden lg:block">
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <h3 class="font-semibold text-gray-800 text-sm mb-3" data-i18n="search.filter.lang">语种</h3>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="lang" data-val="中文"> 中文 <span class="ml-auto text-xs text-gray-400">1,234</span></label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="lang" data-val="English"> English <span class="ml-auto text-xs text-gray-400">892</span></label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="lang" data-val="Malay"> Malay <span class="ml-auto text-xs text-gray-400">234</span></label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="lang" data-val="Tamil"> Tamil <span class="ml-auto text-xs text-gray-400">156</span></label>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <h3 class="font-semibold text-gray-800 text-sm mb-3" data-i18n="search.filter.cat">分类</h3>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="cat" data-val="history"> 历史人文</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="cat" data-val="fiction"> 文学小说</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="cat" data-val="tech"> 科技商业</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="cat" data-val="kids"> 少儿读物</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="cat" data-val="academic"> 学术专著</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="cat" data-val="local"> 本地特色</label>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <h3 class="font-semibold text-gray-800 text-sm mb-3">出版年份</h3>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="year" data-val="2023-2025"> 2023-2025</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="year" data-val="2020-2022"> 2020-2022</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="year" data-val="2015-2019"> 2015-2019</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="year" data-val="before2015"> 2015年以前</label>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm">
+      <h3 class="font-semibold text-gray-800 text-sm mb-3" data-i18n="search.filter.status">借阅状态</h3>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="status" data-val="available"> 可借阅</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="status" data-val="reserve"> 预约中</label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer"><input type="checkbox" class="rounded" data-filter="status" data-val="borrowed"> 已借完</label>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Results -->
+  <div class="flex-1 min-w-0">
+    <!-- Result Header -->
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div>
+        <p class="text-sm text-gray-500">找到 <span id="result-count" class="font-semibold text-gray-800">1,247</span> 本相关书籍</p>
+        <div id="filter-tags" class="flex gap-2 mt-2 flex-wrap">
+          <span class="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full flex items-center gap-1">新加坡历史 <i class="fas fa-times cursor-pointer ml-1 tag-remove"></i></span>
+          <span class="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full flex items-center gap-1">中文 <i class="fas fa-times cursor-pointer ml-1 tag-remove"></i></span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500">排序：</span>
+        <select id="sort-select" class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 bg-white">
+          <option>借阅热度</option>
+          <option>最新上架</option>
+          <option>评分最高</option>
+          <option>出版日期</option>
+        </select>
+        <button class="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition" id="btn-grid-view" title="网格视图">
+          <i class="fas fa-th text-gray-500 text-sm"></i>
+        </button>
+        <button class="p-2 border border-gray-200 rounded-lg bg-gray-100 transition" id="btn-list-view" title="列表视图">
+          <i class="fas fa-list text-gray-500 text-sm"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Book Grid -->
+    <div id="book-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+
+      <!-- Book Card Template (repeated) -->
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#0f4c81,#1a6bb5)">
+          <div><p class="text-white font-bold text-sm leading-tight">新加坡史</p><p class="text-blue-200 text-xs mt-0.5">柯木林</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-available text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.available">可借阅</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.8</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">历史人文 · 中文</p>
+          <button class="mt-2 w-full py-1.5 text-white text-xs rounded-lg font-medium transition hover:opacity-90" style="background:#0f4c81">立即借阅</button>
+        </div>
+      </div>
+
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
+          <div><p class="text-white font-bold text-sm leading-tight">狮城风云</p><p class="text-purple-200 text-xs mt-0.5">许通美</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-available text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.available">可借阅</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.6</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">历史人文 · 中文</p>
+          <button class="mt-2 w-full py-1.5 text-white text-xs rounded-lg font-medium transition hover:opacity-90" style="background:#0f4c81">立即借阅</button>
+        </div>
+      </div>
+
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#dc2626,#f97316)">
+          <div><p class="text-white font-bold text-sm leading-tight">建国之路</p><p class="text-orange-200 text-xs mt-0.5">李光耀</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-borrowed text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.borrowed">已借完</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.9</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">历史人文 · 中文</p>
+          <button class="mt-2 w-full py-1.5 text-xs rounded-lg font-medium transition border" style="color:#0f4c81;border-color:#0f4c81">加入预约</button>
+        </div>
+      </div>
+
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#059669,#10b981)">
+          <div><p class="text-white font-bold text-sm leading-tight">Singapore: A Biography</p><p class="text-green-200 text-xs mt-0.5">Mark Ravinder Frost</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-available text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.available">可借阅</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.7</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">History · English</p>
+          <button class="mt-2 w-full py-1.5 text-white text-xs rounded-lg font-medium transition hover:opacity-90" style="background:#0f4c81">立即借阅</button>
+        </div>
+      </div>
+
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#0891b2,#06b6d4)">
+          <div><p class="text-white font-bold text-sm leading-tight">海峡殖民地史</p><p class="text-cyan-200 text-xs mt-0.5">陈荣照</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-reserve text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.reserved">预约中</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.5</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">历史人文 · 中文</p>
+          <button class="mt-2 w-full py-1.5 text-xs rounded-lg font-medium transition border" style="color:#0f4c81;border-color:#0f4c81">查看详情</button>
+        </div>
+      </div>
+
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#be185d,#ec4899)">
+          <div><p class="text-white font-bold text-sm leading-tight">新加坡华人史</p><p class="text-pink-200 text-xs mt-0.5">崔贵强</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-available text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.available">可借阅</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.6</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">历史人文 · 中文</p>
+          <button class="mt-2 w-full py-1.5 text-white text-xs rounded-lg font-medium transition hover:opacity-90" style="background:#0f4c81">立即借阅</button>
+        </div>
+      </div>
+
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#92400e,#d97706)">
+          <div><p class="text-white font-bold text-sm leading-tight">从第三世界到第一世界</p><p class="text-amber-200 text-xs mt-0.5">李光耀</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-available text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.available">可借阅</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.9</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">历史人文 · 中文</p>
+          <button class="mt-2 w-full py-1.5 text-white text-xs rounded-lg font-medium transition hover:opacity-90" style="background:#0f4c81">立即借阅</button>
+        </div>
+      </div>
+
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-40 flex items-end p-3" style="background:linear-gradient(135deg,#1e40af,#3b82f6)">
+          <div><p class="text-white font-bold text-sm leading-tight">The Singapore Story</p><p class="text-blue-200 text-xs mt-0.5">Lee Kuan Yew</p></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="status-available text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.available">可借阅</span>
+            <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">4.8</span></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">History · English</p>
+          <button class="mt-2 w-full py-1.5 text-white text-xs rounded-lg font-medium transition hover:opacity-90" style="background:#0f4c81">立即借阅</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="flex items-center justify-center gap-2 mt-8"></div>
+  </div>
+</div>
+
+<script>
+// ── 书库数据 ──────────────────────────────────────────────
+const COLORS = [
+  'linear-gradient(135deg,#0f4c81,#1a6bb5)','linear-gradient(135deg,#7c3aed,#a855f7)',
+  'linear-gradient(135deg,#dc2626,#f97316)','linear-gradient(135deg,#059669,#10b981)',
+  'linear-gradient(135deg,#0891b2,#06b6d4)','linear-gradient(135deg,#be185d,#ec4899)',
+  'linear-gradient(135deg,#92400e,#d97706)','linear-gradient(135deg,#1e40af,#3b82f6)',
+  'linear-gradient(135deg,#065f46,#34d399)','linear-gradient(135deg,#374151,#6b7280)',
+  'linear-gradient(135deg,#7c2d12,#ea580c)','linear-gradient(135deg,#4c1d95,#7c3aed)',
+  'linear-gradient(135deg,#134e4a,#0d9488)','linear-gradient(135deg,#831843,#db2777)',
+];
+const c = i => COLORS[i % COLORS.length];
+const BOOKS = [
+  // 历史人文 中文
+  { title:'新加坡史', author:'柯木林', cat:'history', lang:'中文', tags:['历史人文','本地特色'], color:c(0), status:'available', rating:4.8, year:2021 },
+  { title:'狮城风云', author:'许通美', cat:'history', lang:'中文', tags:['历史人文','本地特色'], color:c(1), status:'available', rating:4.6, year:2019 },
+  { title:'建国之路', author:'李光耀', cat:'history', lang:'中文', tags:['历史人文','政治'], color:c(2), status:'borrowed', rating:4.9, year:2018 },
+  { title:'海峡殖民地史', author:'陈荣照', cat:'history', lang:'中文', tags:['历史人文'], color:c(3), status:'reserve', rating:4.5, year:2017 },
+  { title:'新加坡华人史', author:'崔贵强', cat:'history', lang:'中文', tags:['历史人文','本地特色'], color:c(4), status:'available', rating:4.6, year:2020 },
+  { title:'从第三世界到第一世界', author:'李光耀', cat:'history', lang:'中文', tags:['历史人文','政治'], color:c(5), status:'available', rating:4.9, year:2016 },
+  { title:'狮城岁月', author:'方修', cat:'history', lang:'中文', tags:['历史人文','本地特色'], color:c(6), status:'available', rating:4.4, year:2015 },
+  { title:'日据时期的新加坡', author:'黄坚立', cat:'history', lang:'中文', tags:['历史人文'], color:c(7), status:'available', rating:4.3, year:2014 },
+  { title:'新加坡开埠史', author:'许云樵', cat:'history', lang:'中文', tags:['历史人文'], color:c(8), status:'available', rating:4.4, year:2013 },
+  { title:'战后新加坡政治史', author:'陈庆珠', cat:'history', lang:'中文', tags:['历史人文','政治'], color:c(9), status:'borrowed', rating:4.5, year:2011 },
+  { title:'新加坡独立始末', author:'林清如', cat:'history', lang:'中文', tags:['历史人文'], color:c(10), status:'available', rating:4.3, year:2010 },
+  { title:'Singapore: A Biography', author:'Mark Ravinder Frost', cat:'history', lang:'English', tags:['History','Local'], color:c(11), status:'available', rating:4.7, year:2013 },
+  { title:'The Singapore Story', author:'Lee Kuan Yew', cat:'history', lang:'English', tags:['History','Politics'], color:c(12), status:'available', rating:4.8, year:2012 },
+  { title:'A History of Modern Singapore', author:'C.M. Turnbull', cat:'history', lang:'English', tags:['History'], color:c(13), status:'available', rating:4.6, year:2009 },
+  { title:'Raffles and the British Invasion', author:'Tim Hannigan', cat:'history', lang:'English', tags:['History','Local'], color:c(0), status:'borrowed', rating:4.5, year:2012 },
+  { title:'One Man\'s View of the World', author:'Lee Kuan Yew', cat:'history', lang:'English', tags:['History','Politics'], color:c(1), status:'available', rating:4.7, year:2013 },
+  { title:'Hard Truths to Keep Singapore Going', author:'Lee Kuan Yew', cat:'history', lang:'English', tags:['History'], color:c(2), status:'available', rating:4.6, year:2011 },
+  { title:'Singapore: Unlikely Power', author:'John Curtis Perry', cat:'history', lang:'English', tags:['History'], color:c(3), status:'reserve', rating:4.4, year:2017 },
+  { title:'The Straits Chinese', author:'Tan Chee Beng', cat:'history', lang:'English', tags:['History','Local'], color:c(4), status:'available', rating:4.3, year:2004 },
+  // 文学小说
+  { title:'活着', author:'余华', cat:'fiction', lang:'中文', tags:['文学小说'], color:c(5), status:'available', rating:4.9, year:2012 },
+  { title:'白鹿原', author:'陈忠实', cat:'fiction', lang:'中文', tags:['文学小说'], color:c(6), status:'available', rating:4.8, year:2012 },
+  { title:'平凡的世界', author:'路遥', cat:'fiction', lang:'中文', tags:['文学小说'], color:c(7), status:'borrowed', rating:4.9, year:2005 },
+  { title:'围城', author:'钱钟书', cat:'fiction', lang:'中文', tags:['文学小说'], color:c(8), status:'available', rating:4.7, year:2003 },
+  { title:'狮城故事', author:'尤今', cat:'fiction', lang:'中文', tags:['文学小说','本地特色'], color:c(9), status:'available', rating:4.5, year:2018 },
+  { title:'我与新加坡', author:'谢裕民', cat:'fiction', lang:'中文', tags:['文学小说','本地特色'], color:c(10), status:'available', rating:4.4, year:2019 },
+  { title:'浮沉', author:'骆以军', cat:'fiction', lang:'中文', tags:['文学小说'], color:c(11), status:'reserve', rating:4.3, year:2016 },
+  { title:'红楼梦', author:'曹雪芹', cat:'fiction', lang:'中文', tags:['文学小说'], color:c(12), status:'available', rating:4.9, year:2008 },
+  { title:'三体', author:'刘慈欣', cat:'fiction', lang:'中文', tags:['文学小说','科幻'], color:c(13), status:'borrowed', rating:4.9, year:2008 },
+  { title:'Crazy Rich Asians', author:'Kevin Kwan', cat:'fiction', lang:'English', tags:['Fiction','Local'], color:c(0), status:'available', rating:4.6, year:2013 },
+  { title:'The Garden of Evening Mists', author:'Tan Twan Eng', cat:'fiction', lang:'English', tags:['Fiction'], color:c(1), status:'available', rating:4.7, year:2012 },
+  { title:'If We Dream Too Long', author:'Goh Poh Seng', cat:'fiction', lang:'English', tags:['Fiction','Local'], color:c(2), status:'reserve', rating:4.3, year:2010 },
+  { title:'The Harmony Silk Factory', author:'Tash Aw', cat:'fiction', lang:'English', tags:['Fiction'], color:c(3), status:'available', rating:4.4, year:2005 },
+  { title:'Inheritance', author:'Balli Kaur Jaswal', cat:'fiction', lang:'English', tags:['Fiction','Local'], color:c(4), status:'available', rating:4.5, year:2013 },
+  // 科技商业
+  { title:'人工智能时代', author:'李开复', cat:'tech', lang:'中文', tags:['科技商业'], color:c(5), status:'available', rating:4.7, year:2022 },
+  { title:'零售的哲学', author:'铃木敏文', cat:'tech', lang:'中文', tags:['科技商业'], color:c(6), status:'available', rating:4.5, year:2020 },
+  { title:'新加坡经济奇迹', author:'陈庆珠', cat:'tech', lang:'中文', tags:['科技商业','本地特色'], color:c(7), status:'available', rating:4.6, year:2021 },
+  { title:'创业维艰', author:'本·霍洛维茨', cat:'tech', lang:'中文', tags:['科技商业'], color:c(8), status:'borrowed', rating:4.7, year:2019 },
+  { title:'数字化转型', author:'王坚', cat:'tech', lang:'中文', tags:['科技商业'], color:c(9), status:'available', rating:4.4, year:2020 },
+  { title:'新加坡智慧国建设', author:'易华仁', cat:'tech', lang:'中文', tags:['科技商业','本地特色'], color:c(10), status:'available', rating:4.5, year:2022 },
+  { title:'The Lean Startup', author:'Eric Ries', cat:'tech', lang:'English', tags:['Business','Tech'], color:c(11), status:'available', rating:4.6, year:2011 },
+  { title:'Zero to One', author:'Peter Thiel', cat:'tech', lang:'English', tags:['Business'], color:c(12), status:'borrowed', rating:4.7, year:2014 },
+  { title:'Digital Transformation', author:'Thomas Siebel', cat:'tech', lang:'English', tags:['Tech'], color:c(13), status:'available', rating:4.4, year:2019 },
+  { title:'The Innovator\'s Dilemma', author:'Clayton Christensen', cat:'tech', lang:'English', tags:['Business','Tech'], color:c(0), status:'available', rating:4.6, year:2016 },
+  { title:'Good to Great', author:'Jim Collins', cat:'tech', lang:'English', tags:['Business'], color:c(1), status:'available', rating:4.5, year:2001 },
+  // 少儿读物
+  { title:'小王子（中文版）', author:'圣埃克苏佩里', cat:'kids', lang:'中文', tags:['少儿读物'], color:c(2), status:'available', rating:4.9, year:2020 },
+  { title:'神奇树屋系列', author:'玛丽·波·奥斯本', cat:'kids', lang:'中文', tags:['少儿读物'], color:c(3), status:'available', rating:4.7, year:2019 },
+  { title:'新加坡小故事', author:'陈宇昕', cat:'kids', lang:'中文', tags:['少儿读物','本地特色'], color:c(4), status:'available', rating:4.5, year:2022 },
+  { title:'十万个为什么', author:'米·伊林', cat:'kids', lang:'中文', tags:['少儿读物'], color:c(5), status:'available', rating:4.6, year:2018 },
+  { title:'哈利·波特与魔法石', author:'J.K.罗琳', cat:'kids', lang:'中文', tags:['少儿读物'], color:c(6), status:'borrowed', rating:4.9, year:2015 },
+  { title:'The Very Hungry Caterpillar', author:'Eric Carle', cat:'kids', lang:'English', tags:['Children'], color:c(7), status:'available', rating:4.9, year:2002 },
+  { title:'Charlie and the Chocolate Factory', author:'Roald Dahl', cat:'kids', lang:'English', tags:['Children'], color:c(8), status:'available', rating:4.8, year:2007 },
+  { title:'Diary of a Wimpy Kid', author:'Jeff Kinney', cat:'kids', lang:'English', tags:['Children'], color:c(9), status:'borrowed', rating:4.6, year:2007 },
+  { title:'The Lion, the Witch and the Wardrobe', author:'C.S. Lewis', cat:'kids', lang:'English', tags:['Children'], color:c(10), status:'available', rating:4.8, year:2005 },
+  { title:'Singapore Kids\' Tales', author:'Adeline Foo', cat:'kids', lang:'English', tags:['Children','Local'], color:c(11), status:'available', rating:4.4, year:2021 },
+  // 学术专著
+  { title:'东南亚史', author:'霍尔', cat:'academic', lang:'中文', tags:['学术专著','历史人文'], color:c(12), status:'available', rating:4.5, year:2016 },
+  { title:'新加坡政治发展', author:'廖建裕', cat:'academic', lang:'中文', tags:['学术专著','政治'], color:c(13), status:'available', rating:4.4, year:2018 },
+  { title:'多元文化主义研究', author:'李元瑾', cat:'academic', lang:'中文', tags:['学术专著'], color:c(0), status:'reserve', rating:4.3, year:2017 },
+  { title:'新加坡语言政策研究', author:'郭振羽', cat:'academic', lang:'中文', tags:['学术专著'], color:c(1), status:'available', rating:4.2, year:2014 },
+  { title:'Governing Singapore', author:'Hussin Mutalib', cat:'academic', lang:'English', tags:['Academic','Politics'], color:c(2), status:'available', rating:4.4, year:2012 },
+  { title:'The Economics of Singapore', author:'Tilak Doshi', cat:'academic', lang:'English', tags:['Academic','Economics'], color:c(3), status:'available', rating:4.3, year:2015 },
+  { title:'Singapore\'s Authoritarian Capitalism', author:'Christopher Tremewan', cat:'academic', lang:'English', tags:['Academic'], color:c(4), status:'reserve', rating:4.2, year:2010 },
+  { title:'Multiculturalism in Singapore', author:'Lai Ah Eng', cat:'academic', lang:'English', tags:['Academic','Social'], color:c(5), status:'available', rating:4.3, year:2008 },
+  // 本地特色
+  { title:'我们的新加坡', author:'蔡深江', cat:'local', lang:'中文', tags:['本地特色'], color:c(6), status:'available', rating:4.6, year:2023 },
+  { title:'牛车水的故事', author:'柯木林', cat:'local', lang:'中文', tags:['本地特色','历史人文'], color:c(7), status:'available', rating:4.5, year:2021 },
+  { title:'组屋岁月', author:'尤今', cat:'local', lang:'中文', tags:['本地特色'], color:c(8), status:'available', rating:4.4, year:2020 },
+  { title:'新加坡美食地图', author:'陈伟光', cat:'local', lang:'中文', tags:['本地特色'], color:c(9), status:'available', rating:4.5, year:2022 },
+  { title:'狮城街巷', author:'许源泰', cat:'local', lang:'中文', tags:['本地特色'], color:c(10), status:'borrowed', rating:4.3, year:2019 },
+  { title:'Little India Stories', author:'Suchen Christine Lim', cat:'local', lang:'English', tags:['Local'], color:c(11), status:'available', rating:4.4, year:2020 },
+  { title:'Kampong Spirit', author:'Josephine Chia', cat:'local', lang:'English', tags:['Local'], color:c(12), status:'available', rating:4.5, year:2013 },
+  { title:'Singapore Hawker Classics', author:'Sylvia Tan', cat:'local', lang:'English', tags:['Local','Food'], color:c(13), status:'available', rating:4.6, year:2021 },
+  { title:'The Peranakan World', author:'Gretchen Liu', cat:'local', lang:'English', tags:['Local','Culture'], color:c(0), status:'available', rating:4.5, year:2018 },
+  { title:'Chinatown: An Album', author:'Gretchen Liu', cat:'local', lang:'English', tags:['Local'], color:c(1), status:'reserve', rating:4.3, year:2015 },
+  // English
+  { title:'Educated', author:'Tara Westover', cat:'en', lang:'English', tags:['Memoir'], color:c(2), status:'available', rating:4.8, year:2018 },
+  { title:'Sapiens', author:'Yuval Noah Harari', cat:'en', lang:'English', tags:['History','Science'], color:c(3), status:'available', rating:4.8, year:2015 },
+  { title:'Atomic Habits', author:'James Clear', cat:'en', lang:'English', tags:['Self-help'], color:c(4), status:'borrowed', rating:4.7, year:2018 },
+  { title:'The Midnight Library', author:'Matt Haig', cat:'en', lang:'English', tags:['Fiction'], color:c(5), status:'available', rating:4.6, year:2020 },
+  { title:'Thinking, Fast and Slow', author:'Daniel Kahneman', cat:'en', lang:'English', tags:['Psychology'], color:c(6), status:'available', rating:4.7, year:2011 },
+  { title:'The Alchemist', author:'Paulo Coelho', cat:'en', lang:'English', tags:['Fiction'], color:c(7), status:'available', rating:4.7, year:2006 },
+  { title:'Becoming', author:'Michelle Obama', cat:'en', lang:'English', tags:['Memoir'], color:c(8), status:'borrowed', rating:4.8, year:2018 },
+  { title:'The Power of Now', author:'Eckhart Tolle', cat:'en', lang:'English', tags:['Self-help'], color:c(9), status:'available', rating:4.5, year:2004 },
+  { title:'1984', author:'George Orwell', cat:'en', lang:'English', tags:['Fiction'], color:c(10), status:'available', rating:4.8, year:2003 },
+  { title:'To Kill a Mockingbird', author:'Harper Lee', cat:'en', lang:'English', tags:['Fiction'], color:c(11), status:'available', rating:4.8, year:2002 },
+  // Malay
+  { title:'Hikayat Hang Tuah', author:'Anonim', cat:'ms', lang:'Malay', tags:['Sastera'], color:c(12), status:'available', rating:4.5, year:2010 },
+  { title:'Ranjau Sepanjang Jalan', author:'Shahnon Ahmad', cat:'ms', lang:'Malay', tags:['Sastera'], color:c(13), status:'available', rating:4.6, year:2008 },
+  { title:'Sejarah Melayu', author:'Tun Sri Lanang', cat:'ms', lang:'Malay', tags:['Sejarah'], color:c(0), status:'reserve', rating:4.4, year:2006 },
+  { title:'Anak Singapura', author:'Suratman Markasan', cat:'ms', lang:'Malay', tags:['Sastera','Tempatan'], color:c(1), status:'available', rating:4.3, year:2015 },
+  { title:'Salina', author:'A. Samad Said', cat:'ms', lang:'Malay', tags:['Sastera'], color:c(2), status:'available', rating:4.6, year:2007 },
+  { title:'Melunas Rindu', author:'Hartini Hamzah', cat:'ms', lang:'Malay', tags:['Sastera'], color:c(3), status:'available', rating:4.4, year:2016 },
+  { title:'Budaya Melayu Singapura', author:'Hadijah Rahmat', cat:'ms', lang:'Malay', tags:['Budaya','Tempatan'], color:c(4), status:'available', rating:4.3, year:2014 },
+  { title:'Puisi-Puisi Pilihan', author:'Muhammad Ariff Ahmad', cat:'ms', lang:'Malay', tags:['Sastera'], color:c(5), status:'borrowed', rating:4.5, year:2012 },
+  { title:'Singapura Zaman Dahulu', author:'Mohd Raman Daud', cat:'ms', lang:'Malay', tags:['Sejarah','Tempatan'], color:c(6), status:'available', rating:4.4, year:2018 },
+  { title:'Cerpen-Cerpen Terpilih', author:'Isa Kamari', cat:'ms', lang:'Malay', tags:['Sastera'], color:c(7), status:'available', rating:4.5, year:2019 },
+  // Tamil
+  { title:'திருக்குறள்', author:'திருவள்ளுவர்', cat:'ta', lang:'Tamil', tags:['இலக்கியம்'], color:c(8), status:'available', rating:4.9, year:2005 },
+  { title:'சிங்கப்பூர் தமிழர் வரலாறு', author:'சா. கணேசன்', cat:'ta', lang:'Tamil', tags:['வரலாறு'], color:c(9), status:'available', rating:4.5, year:2018 },
+  { title:'புதுமைப்பித்தன் கதைகள்', author:'புதுமைப்பித்தன்', cat:'ta', lang:'Tamil', tags:['இலக்கியம்'], color:c(10), status:'available', rating:4.6, year:2010 },
+  { title:'சிங்கப்பூர் கவிதைகள்', author:'தமிழ்நாடன்', cat:'ta', lang:'Tamil', tags:['இலக்கியம்','உள்ளூர்'], color:c(11), status:'available', rating:4.4, year:2017 },
+  { title:'இலக்கிய வரலாறு', author:'மு. வரதராசன்', cat:'ta', lang:'Tamil', tags:['கல்வி'], color:c(12), status:'reserve', rating:4.3, year:2012 },
+  { title:'சிங்கப்பூர் தமிழ் இலக்கியம்', author:'சிவத்தம்பி', cat:'ta', lang:'Tamil', tags:['இலக்கியம்','உள்ளூர்'], color:c(13), status:'available', rating:4.5, year:2015 },
+  { title:'அம்மா', author:'சுந்தர ராமசாமி', cat:'ta', lang:'Tamil', tags:['இலக்கியம்'], color:c(0), status:'available', rating:4.7, year:2009 },
+];
+
+const CAT_LABELS = {
+  all:'全部', fiction:'文学小说', history:'历史人文', tech:'科技商业',
+  kids:'少儿读物', academic:'学术专著', local:'本地特色',
+  en:'English', ms:'Malay', ta:'Tamil'
+};
+
+const STATUS_HTML = {
+  available: '<span class="status-available text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.available">可借阅</span>',
+  borrowed:  '<span class="status-borrowed text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.borrowed">已借完</span>',
+  reserve:   '<span class="status-reserve text-xs px-2 py-0.5 rounded-full font-medium" data-i18n="home.status.reserved">预约中</span>',
+};
+const BTN_HTML = {
+  available: '<button class="mt-2 w-full py-1.5 text-white text-xs rounded-lg font-medium hover:opacity-90" style="background:#0f4c81">立即借阅</button>',
+  borrowed:  '<button class="mt-2 w-full py-1.5 text-xs rounded-lg font-medium border" style="color:#0f4c81;border-color:#0f4c81">加入预约</button>',
+  reserve:   '<button class="mt-2 w-full py-1.5 text-xs rounded-lg font-medium border" style="color:#0f4c81;border-color:#0f4c81">查看详情</button>',
+};
+
+let currentPage = 1;
+const PAGE_SIZE = 20;
+let _filteredList = [];
+
+function renderBooks(list) {
+  _filteredList = list;
+  if (!list.length) {
+    $('#book-grid').html('<div class="col-span-4 py-16 text-center text-gray-400"><i class="fas fa-search text-4xl mb-3 block"></i>未找到相关书籍</div>');
+    $('#result-count').text('0');
+    $('#pagination').html('');
+    return;
+  }
+  $('#result-count').text(list.length.toLocaleString());
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = list.slice(start, start + PAGE_SIZE);
+  const html = page.map(b => `
+    <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+      <div class="h-40 flex items-end p-3" style="background:${b.color}">
+        <div><p class="text-white font-bold text-sm leading-tight">${b.title}</p><p class="text-white/70 text-xs mt-0.5">${b.author}</p></div>
+      </div>
+      <div class="p-3">
+        <div class="flex items-center justify-between mb-1">
+          ${STATUS_HTML[b.status]}
+          <div class="flex items-center gap-0.5"><i class="fas fa-star text-amber-400 text-xs"></i><span class="text-xs text-gray-600 ml-0.5">${b.rating}</span></div>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">${b.tags[0]} · ${b.lang}</p>
+        ${BTN_HTML[b.status]}
+      </div>
+    </div>`).join('');
+  $('#book-grid').html(html);
+  renderPagination(list.length, currentPage);
+}
+
+function getPageRange(cur, total) {
+  if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+  if (cur <= 4)        return [1, 2, 3, 4, 5, '...', total];
+  if (cur >= total-3)  return [1, '...', total-4, total-3, total-2, total-1, total];
+  return [1, '...', cur-1, cur, cur+1, '...', total];
+}
+
+function renderPagination(total, page) {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  if (totalPages <= 1) { $('#pagination').html(''); return; }
+  const btns = [];
+  btns.push(`<button class="pg-btn w-9 h-9 border border-gray-200 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-50 transition${page===1?' opacity-40 pointer-events-none':''}" data-page="${page-1}"><i class="fas fa-chevron-left text-xs"></i></button>`);
+  getPageRange(page, totalPages).forEach(p => {
+    if (p === '...') {
+      btns.push('<span class="text-gray-400 text-sm px-1">...</span>');
+    } else {
+      const active = p === page;
+      btns.push(`<button class="pg-btn w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium transition${active?' text-white':' border border-gray-200 text-gray-600 hover:bg-gray-50'}" ${active?'style="background:#0f4c81"':''} data-page="${p}">${p}</button>`);
+    }
+  });
+  btns.push(`<button class="pg-btn w-9 h-9 border border-gray-200 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-50 transition${page===totalPages?' opacity-40 pointer-events-none':''}" data-page="${page+1}"><i class="fas fa-chevron-right text-xs"></i></button>`);
+  $('#pagination').html(btns.join(''));
+}
+
+function filterAndRender(query, cat) {
+  let list = BOOKS;
+  if (cat && cat !== 'all') {
+    list = list.filter(b => b.cat === cat);
+  }
+  if (query) {
+    const q = query.toLowerCase();
+    list = list.filter(b =>
+      b.title.toLowerCase().includes(q) ||
+      b.author.toLowerCase().includes(q) ||
+      b.tags.some(t => t.toLowerCase().includes(q)) ||
+      b.lang.toLowerCase().includes(q)
+    );
+  }
+  currentPage = 1;
+  renderBooks(list);
+
+  // 更新搜索框和标签
+  if (query) {
+    $('#search-input').val(query);
+    $('#filter-tags').html(`
+      <span class="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full flex items-center gap-1">
+        ${query} <i class="fas fa-times cursor-pointer ml-1 tag-remove"></i>
+      </span>`);
+  } else if (cat && cat !== 'all') {
+    $('#search-input').val('');
+    $('#filter-tags').html(`
+      <span class="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full flex items-center gap-1">
+        ${CAT_LABELS[cat] || cat} <i class="fas fa-times cursor-pointer ml-1 tag-remove"></i>
+      </span>`);
+  } else {
+    $('#search-input').val('');
+    $('#filter-tags').html('');
+  }
+}
+</script>
+</body>
+<script>
+$(function () {
+  // 读取首页传来的参数
+  const query = sessionStorage.getItem('nlb_search_query') || '';
+  const cat   = sessionStorage.getItem('nlb_search_cat')   || '';
+  sessionStorage.removeItem('nlb_search_query');
+  sessionStorage.removeItem('nlb_search_cat');
+
+  // 若首页传来分类，勾选对应 checkbox
+  if (cat && cat !== 'all') {
+    $(`input[data-filter="cat"][data-val="${cat}"]`).prop('checked', true);
+  }
+
+  filterAndRender(query, cat);
+
+  // ── 核心：收集所有勾选项并过滤 ──
+  function applyFilters() {
+    const query = $('#search-input').val().trim();
+
+    const langs    = getChecked('lang');
+    const cats     = getChecked('cat');
+    const years    = getChecked('year');
+    const statuses = getChecked('status');
+
+    let list = BOOKS;
+
+    if (langs.length)    list = list.filter(b => langs.includes(b.lang));
+    if (cats.length)     list = list.filter(b => cats.includes(b.cat));
+    if (statuses.length) list = list.filter(b => statuses.includes(b.status));
+    if (years.length) {
+      list = list.filter(b => years.some(y => {
+        if (y === '2023-2025')  return b.year >= 2023;
+        if (y === '2020-2022')  return b.year >= 2020 && b.year <= 2022;
+        if (y === '2015-2019')  return b.year >= 2015 && b.year <= 2019;
+        if (y === 'before2015') return b.year < 2015;
+        return false;
+      }));
+    }
+    if (query) {
+      const q = query.toLowerCase();
+      list = list.filter(b =>
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        b.tags.some(t => t.toLowerCase().includes(q)) ||
+        b.lang.toLowerCase().includes(q)
+      );
+    }
+
+    currentPage = 1;
+    renderBooks(list);
+    updateFilterTags(query, cats, langs, years, statuses);
+  }
+
+  function getChecked(filterType) {
+    const vals = [];
+    $(`input[data-filter="${filterType}"]:checked`).each(function(){
+      vals.push($(this).data('val'));
+    });
+    return vals;
+  }
+
+  function updateFilterTags(query, cats, langs, years, statuses) {
+    const tags = [];
+    if (query) tags.push(query);
+    const CAT_MAP = { history:'历史人文', fiction:'文学小说', tech:'科技商业', kids:'少儿读物', academic:'学术专著', local:'本地特色' };
+    cats.forEach(c => tags.push(CAT_MAP[c] || c));
+    langs.forEach(l => tags.push(l));
+    years.forEach(y => tags.push(y === 'before2015' ? '2015年以前' : y));
+    statuses.forEach(s => tags.push({ available:'可借阅', reserve:'预约中', borrowed:'已借完' }[s] || s));
+
+    $('#filter-tags').html(tags.map(t =>
+      `<span class="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full flex items-center gap-1">
+        ${t} <i class="fas fa-times cursor-pointer ml-1 tag-remove" data-label="${t}"></i>
+      </span>`
+    ).join(''));
+  }
+
+  // 初始渲染
+  if (query || cat) {
+    applyFilters();
+  } else {
+    filterAndRender('', '');
+  }
+
+  // checkbox 变化 → 重新过滤
+  $(document).on('change', 'input[data-filter]', function () {
+    applyFilters();
+  });
+
+  // 搜索框回车
+  $('#search-input').on('keydown', function (e) {
+    if (e.key === 'Enter') applyFilters();
+  });
+
+  // 移除标签 → 取消对应 checkbox 并重新过滤
+  $(document).on('click', '.tag-remove', function (e) {
+    e.stopPropagation();
+    const label = $(this).data('label');
+    // 尝试找到对应 checkbox 并取消勾选
+    $('input[data-filter]').each(function(){
+      const val = $(this).data('val');
+      const CAT_MAP = { history:'历史人文', fiction:'文学小说', tech:'科技商业', kids:'少儿读物', academic:'学术专著', local:'本地特色' };
+      const STATUS_MAP = { available:'可借阅', reserve:'预约中', borrowed:'已借完' };
+      const YEAR_MAP = { 'before2015':'2015年以前' };
+      const display = CAT_MAP[val] || STATUS_MAP[val] || YEAR_MAP[val] || val;
+      if (display === label) $(this).prop('checked', false);
+    });
+    // 若是搜索词，清空搜索框
+    if ($('#search-input').val().trim() === label) $('#search-input').val('');
+    applyFilters();
+  });
+
+  // 分页点击
+  $(document).on('click', '.pg-btn', function () {
+    const p = parseInt($(this).data('page'));
+    if (!p) return;
+    currentPage = p;
+    renderBooks(_filteredList);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // 书卡点击 → 详情
+  $(document).on('click', '.book-card', function () {
+    navigateTo('book-detail');
+  });
+
+  // 排序
+  $('#sort-select').on('change', function () {
+    const sort = $(this).val();
+    const $cards = $('#book-grid .book-card');
+    // 简单前端排序演示（基于已渲染文本）
+    applyFilters();
+  });
+
+  // 网格/列表切换
+  $('#btn-grid-view').on('click', function () {
+    $('#book-grid').removeClass('grid-cols-1').addClass('grid-cols-2 sm:grid-cols-3 xl:grid-cols-4');
+    $(this).addClass('bg-gray-100');
+    $('#btn-list-view').removeClass('bg-gray-100');
+  });
+  $('#btn-list-view').on('click', function () {
+    $('#book-grid').removeClass('grid-cols-2 sm:grid-cols-3 xl:grid-cols-4').addClass('grid-cols-1');
+    $(this).addClass('bg-gray-100');
+    $('#btn-grid-view').removeClass('bg-gray-100');
+  });
+});
+</script>
+<script src="search-integration.js"></script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: { primary: '#0f4c81', 'primary-dark': '#0a3560', accent: '#f97316' },
+      fontFamily: { sans: ['Inter', 'sans-serif'] }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .bg-gradient-nlb { background: linear-gradient(135deg, #0f4c81 0%, #1a6bb5 50%, #0e7490 100%); }
+  .card-shadow { box-shadow: 0 20px 60px rgba(15,76,129,0.18); }
+  .tab-active { border-bottom: 3px solid #0f4c81; color: #0f4c81; font-weight: 600; }
+  .input-focus:focus { border-color: #0f4c81; box-shadow: 0 0 0 3px rgba(15,76,129,0.1); outline: none; }
+  .btn-primary { background: #0f4c81; transition: all 0.2s; }
+  .btn-primary:hover { background: #0a3560; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,76,129,0.3); }
+</style>
+</head>
+<body class="bg-gradient-nlb flex flex-col items-center justify-start py-10 px-4 relative" style="min-height:100vh;">
+
+<!-- Admin Portal Link (Top Right) -->
+<div class="absolute top-4 right-4 sm:top-6 sm:right-6 z-50">
+  <a href="admin-login.html" onclick="event.preventDefault(); navigateTo('admin-login')" class="text-blue-100 hover:text-white text-sm opacity-80 hover:opacity-100 transition flex items-center gap-1.5 bg-black/10 hover:bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+    <i class="fas fa-shield-alt"></i> <span data-i18n="login.admin">管理员入口</span>
+  </a>
+</div>
+
+<div class="absolute -top-40 -right-40 w-96 h-96 bg-white opacity-5 rounded-full pointer-events-none"></div>
+<div class="absolute -bottom-20 -left-20 w-64 h-64 bg-white opacity-5 rounded-full pointer-events-none"></div>
+
+<div class="w-full max-w-md relative z-10">
+  <!-- Logo -->
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
+      <i class="fas fa-book-open text-2xl" style="color:#0f4c81"></i>
+    </div>
+    <h1 class="text-3xl font-bold text-white">NLB eReads</h1>
+    <p class="text-blue-200 mt-1 text-sm" data-i18n="app.tagline">新加坡国家图书馆 · 正版电子书平台</p>
+  </div>
+
+  <!-- Card -->
+  <div class="bg-white rounded-3xl card-shadow p-8">
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-100 mb-6">
+      <button class="tab-btn tab-active flex-1 pb-3 text-sm" data-tab="card" data-i18n="login.tab.card">借书证登录</button>
+      <button class="tab-btn flex-1 pb-3 text-sm text-gray-400 hover:text-gray-600" data-tab="mobile" data-i18n="login.tab.mobile">手机验证码</button>
+      <button class="tab-btn flex-1 pb-3 text-sm text-gray-400 hover:text-gray-600" data-tab="nlb" data-i18n="login.tab.nlb">NLB Mobile</button>
+    </div>
+
+    <!-- Tab: Card -->
+    <div class="tab-panel" id="panel-card">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="login.card.label">借书证号</label>
+        <div class="relative">
+          <i class="fas fa-id-card absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="text" data-i18n-placeholder="login.card.placeholder" placeholder="请输入借书证号码" class="input-focus w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50">
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="login.pwd.label">密码 / PIN</label>
+        <div class="relative">
+          <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="password" id="pwd-input" data-i18n-placeholder="login.pwd.placeholder" placeholder="请输入密码" class="input-focus w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50">
+          <i class="fas fa-eye absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer text-sm" id="toggle-pwd"></i>
+        </div>
+      </div>
+      <div class="flex items-center justify-between mb-6 text-sm">
+        <label class="flex items-center gap-2 text-gray-600 cursor-pointer">
+          <input type="checkbox" class="rounded border-gray-300"> <span data-i18n="login.remember">记住登录</span>
+        </label>
+        <a href="#" class="text-blue-700 hover:underline" data-i18n="login.forgot">忘记密码？</a>
+      </div>
+      <button id="btn-login" class="btn-primary w-full py-3 text-white rounded-xl font-semibold text-sm">
+        <i class="fas fa-sign-in-alt mr-2"></i><span data-i18n="login.btn">登录平台</span>
+      </button>
+    </div>
+
+    <!-- Tab: Mobile -->
+    <div class="tab-panel hidden" id="panel-mobile">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="login.mobile.phone.label">手机号码</label>
+        <div class="relative">
+          <i class="fas fa-mobile-alt absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="tel" data-i18n-placeholder="login.mobile.phone.placeholder" placeholder="+65 请输入手机号" class="input-focus w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50">
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="login.mobile.code.label">验证码</label>
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <i class="fas fa-shield-alt absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            <input type="text" data-i18n-placeholder="login.mobile.code.placeholder" placeholder="6位验证码" class="input-focus w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50">
+          </div>
+          <button id="btn-send-code" class="px-4 py-3 border border-blue-700 text-blue-700 rounded-xl text-sm font-medium hover:bg-blue-50 whitespace-nowrap" data-i18n="login.mobile.send">发送验证码</button>
+        </div>
+      </div>
+      <button class="btn-login-mobile btn-primary w-full py-3 text-white rounded-xl font-semibold text-sm">
+        <i class="fas fa-sign-in-alt mr-2"></i><span data-i18n="login.mobile.btn">验证登录</span>
+      </button>
+    </div>
+
+    <!-- Tab: NLB Mobile -->
+    <div class="tab-panel hidden" id="panel-nlb">
+      <div class="text-center py-4">
+        <div class="w-32 h-32 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+          <i class="fas fa-qrcode text-5xl text-gray-400"></i>
+        </div>
+        <p class="text-sm text-gray-600 mb-2" data-i18n="login.nlb.scan">使用 NLB Mobile App 扫码登录</p>
+        <p class="text-xs text-gray-400" data-i18n="login.nlb.hint">打开 NLB Mobile → 扫一扫 → 扫描此二维码</p>
+        <button id="btn-refresh-qr" class="mt-4 text-sm text-blue-700 hover:underline">
+          <i class="fas fa-sync-alt mr-1"></i><span data-i18n="login.nlb.refresh">刷新二维码</span>
+        </button>
+        <div class="mt-5">
+          <button class="btn-login-nlb btn-primary w-full py-3 text-white rounded-xl font-semibold text-sm">
+            <i class="fas fa-check-circle mr-2"></i><span data-i18n="login.nlb.btn">已扫码，进入平台</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="flex items-center my-5">
+      <div class="flex-1 border-t border-gray-100"></div>
+      <span class="px-3 text-xs text-gray-400" data-i18n="login.other">其他方式</span>
+      <div class="flex-1 border-t border-gray-100"></div>
+    </div>
+
+    <!-- Quick Options -->
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <button class="flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+        <i class="fas fa-qrcode text-primary"></i><span data-i18n="login.qr">扫码登录</span>
+      </button>
+      <button class="flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+        <i class="fas fa-users text-green-500"></i><span data-i18n="login.family">家属代绑</span>
+      </button>
+    </div>
+
+    <!-- Accessibility -->
+    <div class="bg-blue-50 rounded-xl p-4 mb-4">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-universal-access text-primary"></i>
+        <div>
+          <p class="text-sm font-medium text-gray-700" data-i18n="login.access.title">无障碍辅助入口</p>
+          <p class="text-xs text-gray-500 mt-0.5" data-i18n="login.access.desc">大字模式 · 语音朗读 · 高对比度</p>
+        </div>
+        <button class="ml-auto text-xs text-primary font-medium hover:underline" data-i18n="login.access.btn">开启</button>
+      </div>
+    </div>
+
+    <p class="text-center text-xs text-gray-400">
+      <span data-i18n="login.free">持有效借书证可</span><span class="text-primary font-medium" data-i18n="login.free.highlight">免费借阅</span><span data-i18n="login.free.suffix">所有电子书</span>
+      · <a href="#" class="hover:underline" data-i18n="login.guide">办证指引</a>
+    </p>
+  </div>
+
+  <p class="text-center text-blue-200 text-xs mt-6" data-i18n="login.copyright">
+    © 2025 National Library Board Singapore · 版权合规平台
+  </p>
+</div>
+
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+<script>
+$(function () {
+  // Tab switching
+  $('.tab-btn').on('click', function () {
+    $('.tab-btn').removeClass('tab-active').addClass('text-gray-400').css('color','');
+    $(this).addClass('tab-active').removeClass('text-gray-400');
+    $('.tab-panel').addClass('hidden');
+    $('#panel-' + $(this).data('tab')).removeClass('hidden');
+  });
+
+  // Toggle password visibility
+  $('#toggle-pwd').on('click', function () {
+    const input = $('#pwd-input');
+    const isText = input.attr('type') === 'text';
+    input.attr('type', isText ? 'password' : 'text');
+    $(this).toggleClass('fa-eye fa-eye-slash');
+  });
+
+  // Card login
+  $('#btn-login').on('click', async function () {
+    const card_no = $('#panel-card input[type="text"]').val().trim();
+    const password = $('#pwd-input').val().trim();
+
+    if (!card_no || !password) {
+      alert('请输入借书证号和密码');
+      return;
+    }
+
+    const $btn = $(this);
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>登录中...');
+
+    try {
+      const res = await authAPI.loginWithCard(card_no, password);
+      apiClient.setToken(res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      navigateTo('home');
+    } catch (error) {
+      alert(error.message || '登录失败');
+      $btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i><span data-i18n="login.btn">登录平台</span>');
+    }
+  });
+
+  // Mobile login
+  $('.btn-login-mobile').on('click', async function () {
+    const phone = $('#panel-mobile input[type="tel"]').val().trim();
+    const code = $('#panel-mobile input[type="text"]').val().trim();
+
+    if (!phone || !code) {
+      alert('请输入手机号和验证码');
+      return;
+    }
+
+    const $btn = $(this);
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>验证中...');
+
+    try {
+      const res = await authAPI.loginWithMobile(phone, code);
+      apiClient.setToken(res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      navigateTo('home');
+    } catch (error) {
+      alert(error.message || '登录失败');
+      $btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i><span data-i18n="login.mobile.btn">验证登录</span>');
+    }
+  });
+
+  // Send OTP
+  $('#btn-send-code').on('click', async function () {
+    const phone = $('#panel-mobile input[type="tel"]').val().trim();
+
+    if (!phone) {
+      alert('请输入手机号');
+      return;
+    }
+
+    try {
+      await authAPI.sendOTP(phone);
+
+      let count = 60;
+      const $btn = $(this);
+      $btn.prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      const timer = setInterval(function () {
+        $btn.text(t('login.countdown', {n: count}));
+        count--;
+        if (count < 0) {
+          clearInterval(timer);
+          $btn.text(t('login.mobile.send')).prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+        }
+      }, 1000);
+    } catch (error) {
+      alert(error.message || '发送失败');
+    }
+  });
+
+  // QR login
+  $('.btn-login-nlb').on('click', function () {
+    navigateTo('home');
+  });
+
+  // Refresh QR
+  $('#btn-refresh-qr').on('click', async function () {
+    $(this).html(`<i class="fas fa-spinner fa-spin mr-1"></i>${t('login.nlb.refreshing')}`);
+    try {
+      await authAPI.getQRCode();
+      setTimeout(() => {
+        $(this).html(`<i class="fas fa-sync-alt mr-1"></i>${t('login.nlb.refresh')}`);
+      }, 1500);
+    } catch (error) {
+      $(this).html(`<i class="fas fa-sync-alt mr-1"></i>${t('login.nlb.refresh')}`);
+    }
+  });
+});
+</script>
+</body>
+</html>

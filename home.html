@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>首页 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#0f4c81','primary-dark':'#0a3560',accent:'#f97316'},fontFamily:{sans:['Inter','sans-serif']}}}}</script>
+<style>
+  body{font-family:'Inter',sans-serif;background:#f8fafc;}
+  .nav-shadow{box-shadow:0 2px 20px rgba(15,76,129,0.08);}
+  .hero-gradient{background:linear-gradient(135deg,#0f4c81 0%,#1a6bb5 60%,#0e7490 100%);}
+  .card-hover{transition:all 0.2s;cursor:pointer;}
+  .card-hover:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(15,76,129,0.15);}
+  .scrollbar-hide::-webkit-scrollbar{display:none;}
+  /* Singapore orchid float animation */
+  @keyframes orchidFloat{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-10px) rotate(-4deg)}}
+  @keyframes orchidFloat2{0%,100%{transform:translateY(0) rotate(6deg)}50%{transform:translateY(-8px) rotate(10deg)}}
+  .sg-orchid-1{animation:orchidFloat 5s ease-in-out infinite;}
+  .sg-orchid-2{animation:orchidFloat2 6.5s ease-in-out infinite;}
+  /* SG banner */
+  .sg-banner{background:linear-gradient(90deg,#c8102e 0%,#c8102e 50%,#fff 50%,#fff 100%);}
+  /* AI Search Button */
+  @keyframes aiGlow{0%,100%{box-shadow:0 2px 8px rgba(249,115,22,.4),inset 0 1px 0 rgba(255,255,255,.2)}50%{box-shadow:0 2px 14px rgba(249,115,22,.7),inset 0 1px 0 rgba(255,255,255,.2)}}
+  @keyframes aiSparkle{0%,100%{transform:scale(1) rotate(0deg)}50%{transform:scale(1.15) rotate(12deg)}}
+  #btn-search{animation:aiGlow 2s ease-in-out infinite;background:linear-gradient(135deg,#f97316,#fb923c)!important;}
+  #btn-search:hover{animation:none;box-shadow:0 4px 16px rgba(249,115,22,.6)!important;transform:scale(1.04);}
+  #btn-search .fa-magic{animation:aiSparkle 2s ease-in-out infinite;display:inline-block;}
+  /* AI Search Modal */
+  @keyframes aiSrchIn{from{transform:scale(.93) translateY(-12px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+  #ai-search-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);}
+  #ai-search-modal{width:560px;max-width:calc(100vw - 32px);max-height:calc(100vh - 48px);border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 24px 64px rgba(0,0,0,.25);animation:aiSrchIn .3s cubic-bezier(.34,1.56,.64,1);display:flex;flex-direction:column;}
+  .ai-srch-hd{background:linear-gradient(135deg,#0f4c81,#1a6bb5);padding:16px 20px;flex-shrink:0;}
+  .ai-srch-body{overflow-y:auto;padding:20px;}
+  .ai-srch-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s;}
+  .ai-srch-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(15,76,129,.12);border-color:#bfdbfe;}
+  .ai-dot{width:8px;height:8px;border-radius:50%;background:#93c5fd;animation:aiDt 1.2s infinite;display:inline-block;}
+  .ai-dot:nth-child(2){animation-delay:.2s;}.ai-dot:nth-child(3){animation-delay:.4s;}
+  @keyframes aiDt{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Nav -->
+<nav class="bg-white nav-shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex items-center h-16 gap-4">
+      <div class="flex items-center gap-2 flex-shrink-0 cursor-pointer" data-nav="home">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:#0f4c81">
+          <i class="fas fa-book-open text-white text-sm"></i>
+        </div>
+        <span class="font-bold text-lg hidden sm:block" style="color:#0f4c81">NLB eReads</span>
+      </div>
+      <div class="flex-1 max-w-2xl mx-auto">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input id="search-input" type="text" data-i18n-placeholder="home.search.placeholder" placeholder="搜索书名、作者、ISBN..." class="w-full pl-10 pr-20 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:bg-white transition">
+          <button id="btn-search" class="absolute right-2 top-1/2 -translate-y-1/2 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition" style="background:#0f4c81">
+            <i class="fas fa-magic mr-1"></i><span data-i18n="home.search.btn">AI搜索</span>
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <button class="relative p-2 text-gray-500 hover:text-primary transition" onclick="openNlbNotifications()">
+          <i class="fas fa-bell text-lg"></i>
+        </button>
+        <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-xl px-2 py-1.5 transition" data-nav="profile">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:#0f4c81">
+            <span class="text-white text-xs font-bold user-avatar-initial"></span>
+          </div>
+          <div class="hidden sm:block">
+            <p class="text-xs font-medium text-gray-800 user-name">陈小明</p>
+            <p class="text-xs text-gray-400">证号 <span class="user-card">S1234567A</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Category Nav -->
+    <div class="flex items-center gap-1 pb-2 overflow-x-auto scrollbar-hide">
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition" style="background:#0f4c81;color:#fff" data-cat="all" data-i18n="home.cat.all">全部</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="fiction" data-i18n="home.cat.fiction">文学小说</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="history" data-i18n="home.cat.history">历史人文</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="tech" data-i18n="home.cat.tech">科技商业</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="kids" data-i18n="home.cat.kids">少儿读物</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="academic" data-i18n="home.cat.academic">学术专著</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="local" data-i18n="home.cat.local">本地特色</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="en">English</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="ms">Malay</button>
+      <button class="cat-btn flex-shrink-0 px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded-full text-xs transition" data-cat="ta">Tamil</button>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+
+  <!-- Hero -->
+  <div class="hero-gradient rounded-2xl p-6 sm:p-8 mb-6 relative overflow-hidden">
+
+    <!-- Singapore flag strip (top-left accent) -->
+    <div class="absolute top-0 left-0 w-full h-1 opacity-60" style="background:linear-gradient(90deg,#c8102e,#c8102e 50%,#fff 50%,#fff)"></div>
+
+    <!-- Decorative: orchid + lion silhouette (right side) -->
+    <div class="absolute right-0 top-0 h-full pointer-events-none select-none" style="width:260px;">
+      <!-- Merlion silhouette -->
+      <svg class="absolute" style="right:-10px;bottom:-4px;opacity:0.08;width:160px;height:160px;" viewBox="0 0 100 120" fill="white">
+        <!-- body -->
+        <ellipse cx="50" cy="85" rx="28" ry="30"/>
+        <!-- fish tail -->
+        <path d="M22 100 Q10 115 18 118 Q30 108 50 110 Q70 108 82 118 Q90 115 78 100"/>
+        <!-- neck -->
+        <rect x="38" y="56" width="24" height="20" rx="8"/>
+        <!-- head -->
+        <ellipse cx="50" cy="48" rx="20" ry="18"/>
+        <!-- mane -->
+        <path d="M30 42 Q28 30 38 28 Q50 24 62 28 Q72 30 70 42" fill="white" opacity="0.8"/>
+        <!-- spout -->
+        <path d="M42 30 Q44 18 50 14 Q56 18 58 30" opacity="0.9"/>
+        <!-- eye -->
+        <circle cx="44" cy="46" r="2.5" fill="rgba(15,76,129,0.4)"/>
+        <circle cx="56" cy="46" r="2.5" fill="rgba(15,76,129,0.4)"/>
+      </svg>
+
+      <!-- Orchid 1 (Vanda Miss Joaquim - Singapore national flower) -->
+      <svg class="sg-orchid-1 absolute" style="right:30px;top:12px;width:52px;height:52px;opacity:0.28;" viewBox="0 0 60 60" fill="none">
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#c084fc" transform="rotate(-30 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#a855f7" transform="rotate(30 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#c084fc" transform="rotate(-90 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#a855f7" transform="rotate(90 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#e879f9" transform="rotate(0 30 20)"/>
+        <circle cx="30" cy="20" r="5" fill="#fef08a"/>
+        <circle cx="30" cy="20" r="2.5" fill="#fbbf24"/>
+      </svg>
+
+      <!-- Orchid 2 (smaller, offset) -->
+      <svg class="sg-orchid-2 absolute" style="right:78px;top:40px;width:36px;height:36px;opacity:0.20;" viewBox="0 0 60 60" fill="none">
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#e879f9" transform="rotate(-30 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#c084fc" transform="rotate(30 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#e879f9" transform="rotate(-90 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#c084fc" transform="rotate(90 30 20)"/>
+        <ellipse cx="30" cy="20" rx="8" ry="14" fill="#a855f7" transform="rotate(0 30 20)"/>
+        <circle cx="30" cy="20" r="5" fill="#fef08a"/>
+        <circle cx="30" cy="20" r="2.5" fill="#fbbf24"/>
+      </svg>
+
+      <!-- Singapore flag (mini) -->
+      <div class="absolute" style="right:16px;top:14px;width:36px;height:24px;border-radius:4px;overflow:hidden;opacity:0.55;box-shadow:0 2px 6px rgba(0,0,0,.3);">
+        <div style="height:12px;background:#c8102e;display:flex;align-items:center;padding-left:4px;gap:2px;">
+          <!-- crescent -->
+          <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="white"/><circle cx="7" cy="5" r="3" fill="#c8102e"/></svg>
+          <!-- 5 stars -->
+          <div style="display:flex;gap:1px;margin-left:1px;">
+            <svg width="4" height="4" viewBox="0 0 10 10"><polygon points="5,1 6.2,3.8 9.5,3.8 6.9,5.8 7.9,9 5,7.2 2.1,9 3.1,5.8 0.5,3.8 3.8,3.8" fill="white"/></svg>
+            <svg width="4" height="4" viewBox="0 0 10 10"><polygon points="5,1 6.2,3.8 9.5,3.8 6.9,5.8 7.9,9 5,7.2 2.1,9 3.1,5.8 0.5,3.8 3.8,3.8" fill="white"/></svg>
+            <svg width="4" height="4" viewBox="0 0 10 10"><polygon points="5,1 6.2,3.8 9.5,3.8 6.9,5.8 7.9,9 5,7.2 2.1,9 3.1,5.8 0.5,3.8 3.8,3.8" fill="white"/></svg>
+            <svg width="4" height="4" viewBox="0 0 10 10"><polygon points="5,1 6.2,3.8 9.5,3.8 6.9,5.8 7.9,9 5,7.2 2.1,9 3.1,5.8 0.5,3.8 3.8,3.8" fill="white"/></svg>
+            <svg width="4" height="4" viewBox="0 0 10 10"><polygon points="5,1 6.2,3.8 9.5,3.8 6.9,5.8 7.9,9 5,7.2 2.1,9 3.1,5.8 0.5,3.8 3.8,3.8" fill="white"/></svg>
+          </div>
+        </div>
+        <div style="height:12px;background:#fff;"></div>
+      </div>
+    </div>
+
+    <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <span class="inline-block bg-white/20 text-white text-xs px-3 py-1 rounded-full mb-3" data-i18n="home.hero.badge">🎉 本月新书已上架 128 本</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2" data-i18n="home.hero.title">探索无限知识世界</h2>
+        <p class="text-blue-100 text-sm mb-4" data-i18n="home.hero.subtitle">持有效借书证，免费借阅 50,000+ 正版电子书</p>
+        <div class="flex gap-3">
+          <button class="bg-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-blue-50 transition" style="color:#0f4c81" data-nav="search">
+            <i class="fas fa-search mr-2"></i><span data-i18n="home.hero.btn.search">开始找书</span>
+          </button>
+          <button class="bg-white/20 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-white/30 transition" data-nav="bookshelf">
+            <i class="fas fa-bookmark mr-2"></i><span data-i18n="home.hero.btn.shelf">我的书架</span>
+          </button>
+        </div>
+      </div>
+      <div class="flex gap-3 flex-shrink-0">
+        <div class="bg-white/10 rounded-2xl p-4 text-center">
+          <p class="text-2xl font-bold text-white">50K+</p>
+          <p class="text-blue-200 text-xs mt-1" data-i18n="home.hero.stat.books">电子书</p>
+        </div>
+        <div class="bg-white/10 rounded-2xl p-4 text-center">
+          <p class="text-2xl font-bold text-white">4</p>
+          <p class="text-blue-200 text-xs mt-1" data-i18n="home.hero.stat.langs">语种</p>
+        </div>
+        <div class="bg-white/10 rounded-2xl p-4 text-center">
+          <p class="text-2xl font-bold text-white" data-i18n="home.hero.stat.free">免费</p>
+          <p class="text-blue-200 text-xs mt-1" data-i18n="home.hero.stat.free.sub">持证借阅</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Singapore Identity Banner -->
+  <div class="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden">
+    <div class="flex items-stretch">
+      <!-- Flag colors accent bar -->
+      <div class="w-2 flex-shrink-0" style="background:linear-gradient(180deg,#c8102e 50%,#e2e8f0 50%);"></div>
+      <div class="flex-1 px-5 py-4 flex flex-wrap items-center gap-4 sm:gap-6">
+        <!-- Lion head icon -->
+        <div class="flex items-center gap-2.5 flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#c8102e,#e53e3e)">
+            <!-- Lion head SVG -->
+            <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+              <ellipse cx="20" cy="22" rx="12" ry="10" fill="white" opacity="0.9"/>
+              <path d="M8 18 Q8 8 20 6 Q32 8 32 18" fill="white" opacity="0.7"/>
+              <circle cx="15" cy="20" r="2" fill="white"/>
+              <circle cx="25" cy="20" r="2" fill="white"/>
+              <path d="M16 25 Q20 28 24 25" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+              <path d="M6 14 Q4 10 8 12" stroke="white" stroke-width="1.5" fill="none"/>
+              <path d="M34 14 Q36 10 32 12" stroke="white" stroke-width="1.5" fill="none"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-gray-800">Lion City</p>
+            <p class="text-xs text-gray-400">新加坡 · Singapore</p>
+          </div>
+        </div>
+
+        <div class="w-px h-8 bg-gray-100 hidden sm:block flex-shrink-0"></div>
+
+        <!-- Orchid badge -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <svg width="24" height="24" viewBox="0 0 60 60" fill="none">
+            <ellipse cx="30" cy="22" rx="7" ry="13" fill="#c084fc" transform="rotate(-30 30 22)"/>
+            <ellipse cx="30" cy="22" rx="7" ry="13" fill="#a855f7" transform="rotate(30 30 22)"/>
+            <ellipse cx="30" cy="22" rx="7" ry="13" fill="#c084fc" transform="rotate(-90 30 22)"/>
+            <ellipse cx="30" cy="22" rx="7" ry="13" fill="#a855f7" transform="rotate(90 30 22)"/>
+            <ellipse cx="30" cy="22" rx="7" ry="13" fill="#e879f9" transform="rotate(0 30 22)"/>
+            <circle cx="30" cy="22" r="5" fill="#fef08a"/>
+            <circle cx="30" cy="22" r="2.5" fill="#fbbf24"/>
+          </svg>
+          <div>
+            <p class="text-xs font-bold text-gray-800">Vanda Miss Joaquim</p>
+            <p class="text-xs text-gray-400">国花 National Flower</p>
+          </div>
+        </div>
+
+        <div class="w-px h-8 bg-gray-100 hidden sm:block flex-shrink-0"></div>
+
+        <!-- Multilingual badge -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#0f4c81,#1a6bb5)">
+            <i class="fas fa-language text-white text-sm"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-gray-800">中 · EN · MS · தமிழ்</p>
+            <p class="text-xs text-gray-400">四语文化 4 Official Languages</p>
+          </div>
+        </div>
+
+        <div class="w-px h-8 bg-gray-100 hidden lg:block flex-shrink-0"></div>
+
+        <!-- Crescent & Stars -->
+        <div class="items-center gap-2 flex-shrink-0 hidden lg:flex">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#1e3a5f,#2d5986)">
+            <svg width="22" height="22" viewBox="0 0 40 40">
+              <circle cx="16" cy="20" r="9" fill="white"/>
+              <circle cx="21" cy="20" r="7" fill="#1e3a5f"/>
+              <polygon points="30,8 31,11.5 34.5,11.5 31.8,13.5 32.8,17 30,15 27.2,17 28.2,13.5 25.5,11.5 29,11.5" fill="white"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-gray-800">🌙 ✦✦✦✦✦</p>
+            <p class="text-xs text-gray-400">国徽 National Emblem</p>
+          </div>
+        </div>
+
+        <div class="ml-auto flex-shrink-0">
+          <button class="text-xs font-medium px-3 py-1.5 rounded-lg transition hover:opacity-80" style="background:#eff6ff;color:#0f4c81" data-cat="local" onclick="sessionStorage.setItem('nlb_search_cat','local');navigateTo('search')">
+            <i class="fas fa-seedling mr-1"></i>本地专区 →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-6">
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="bookshelf">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#eff6ff">
+        <i class="fas fa-book-open text-sm" style="color:#0f4c81"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.shelf">我的书架</p>
+    </div>
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="bookshelf">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#f0fdf4">
+        <i class="fas fa-clock text-sm text-green-600"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.borrowing">借阅中</p>
+    </div>
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="bookshelf">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#fefce8">
+        <i class="fas fa-download text-sm text-yellow-600"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.offline">离线下载</p>
+    </div>
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="devices">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#fdf4ff">
+        <i class="fas fa-tablet-alt text-sm text-purple-600"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.push">阅读器推送</p>
+    </div>
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="search">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#fff7ed">
+        <i class="fas fa-fire text-sm text-orange-500"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.hot">热门借阅</p>
+    </div>
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="search">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#f0fdf4">
+        <i class="fas fa-seedling text-sm text-green-600"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.local">本地特色</p>
+    </div>
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="profile">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#fef2f2">
+        <i class="fas fa-user text-sm text-red-500"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.profile">个人中心</p>
+    </div>
+    <div class="quick-action bg-white rounded-2xl p-3 shadow-sm text-center cursor-pointer hover:shadow-md transition" data-nav="help">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style="background:#f0f9ff">
+        <i class="fas fa-headset text-sm text-cyan-600"></i>
+      </div>
+      <p class="text-xs text-gray-600 font-medium" data-i18n="home.quick.help">帮助客服</p>
+    </div>
+  </div>
+
+  <!-- New Books -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-gray-800 text-base" data-i18n="home.newbooks.title">新书速递</h3>
+      <button class="text-sm hover:underline flex items-center gap-1" style="color:#0f4c81" data-nav="search">
+        <span data-i18n="home.newbooks.more">查看全部</span> <i class="fas fa-chevron-right text-xs"></i>
+      </button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4" id="new-books-container">
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-36 flex items-end p-3" style="background:linear-gradient(135deg,#0f4c81,#1a6bb5)">
+          <div><p class="text-white font-bold text-xs">新加坡史</p><p class="text-blue-200 text-xs">柯木林</p></div>
+        </div>
+        <div class="p-3">
+          <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full" data-i18n="home.status.available">可借阅</span>
+          <p class="text-xs text-gray-400 mt-1.5">历史人文 · 中文</p>
+        </div>
+      </div>
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-36 flex items-end p-3" style="background:linear-gradient(135deg,#f093fb,#f5576c)">
+          <div><p class="text-white font-bold text-xs">活着</p><p class="text-pink-100 text-xs">余华</p></div>
+        </div>
+        <div class="p-3">
+          <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full" data-i18n="home.status.available">可借阅</span>
+          <p class="text-xs text-gray-400 mt-1.5">文学小说 · 中文</p>
+        </div>
+      </div>
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-36 flex items-end p-3" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">
+          <div><p class="text-white font-bold text-xs">Crazy Rich Asians</p><p class="text-blue-100 text-xs">Kevin Kwan</p></div>
+        </div>
+        <div class="p-3">
+          <span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full" data-i18n="home.status.reserved">预约中</span>
+          <p class="text-xs text-gray-400 mt-1.5">Fiction · English</p>
+        </div>
+      </div>
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-36 flex items-end p-3" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">
+          <div><p class="text-white font-bold text-xs">小王子</p><p class="text-green-100 text-xs">圣埃克苏佩里</p></div>
+        </div>
+        <div class="p-3">
+          <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full" data-i18n="home.status.available">可借阅</span>
+          <p class="text-xs text-gray-400 mt-1.5">少儿读物 · 中文</p>
+        </div>
+      </div>
+      <div class="book-card bg-white rounded-2xl shadow-sm card-hover overflow-hidden" data-nav="book-detail">
+        <div class="h-36 flex items-end p-3" style="background:linear-gradient(135deg,#fa709a,#fee140)">
+          <div><p class="text-white font-bold text-xs">三体</p><p class="text-yellow-100 text-xs">刘慈欣</p></div>
+        </div>
+        <div class="p-3">
+          <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full" data-i18n="home.status.available">可借阅</span>
+          <p class="text-xs text-gray-400 mt-1.5">科幻小说 · 中文</p>
+        </div>
+      </div>
+      <!-- Singapore Local Pick card -->
+      <div class="book-card rounded-2xl card-hover overflow-hidden relative" data-nav="search" style="background:linear-gradient(135deg,#c8102e 0%,#8b0000 100%);">
+        <!-- decorative orchid watermark -->
+        <div class="h-36 flex flex-col items-center justify-center p-3 relative overflow-hidden">
+          <svg class="absolute opacity-15" style="width:90px;height:90px;bottom:-10px;right:-10px;" viewBox="0 0 60 60" fill="none">
+            <ellipse cx="30" cy="22" rx="8" ry="14" fill="white" transform="rotate(-30 30 22)"/>
+            <ellipse cx="30" cy="22" rx="8" ry="14" fill="white" transform="rotate(30 30 22)"/>
+            <ellipse cx="30" cy="22" rx="8" ry="14" fill="white" transform="rotate(-90 30 22)"/>
+            <ellipse cx="30" cy="22" rx="8" ry="14" fill="white" transform="rotate(90 30 22)"/>
+            <ellipse cx="30" cy="22" rx="8" ry="14" fill="white" transform="rotate(0 30 22)"/>
+          </svg>
+          <!-- SG flag crescent+stars -->
+          <svg width="32" height="32" viewBox="0 0 40 40" class="mb-2">
+            <circle cx="14" cy="20" r="10" fill="white" opacity="0.9"/>
+            <circle cx="20" cy="20" r="8" fill="#c8102e"/>
+            <polygon points="31,7 32.5,11.5 37,11.5 33.5,14 35,18.5 31,16 27,18.5 28.5,14 25,11.5 29.5,11.5" fill="white"/>
+          </svg>
+          <p class="text-white font-bold text-xs text-center leading-snug">本地特色</p>
+          <p class="text-red-200 text-xs text-center">Singapore Local</p>
+        </div>
+        <div class="p-3" style="background:rgba(0,0,0,0.2)">
+          <span class="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">🌺 专区</span>
+          <p class="text-xs text-red-200 mt-1.5">本地历史 · 四语</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcements + Stats -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-5">
+      <h3 class="font-bold text-gray-800 text-base mb-4" data-i18n="home.announce.title">公告动态</h3>
+      <div class="space-y-3" id="notices-container">
+        <div class="announce-item flex items-start gap-3 p-3 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition"
+          data-tag="新书" data-date="2025-03-15"
+          data-title="3月新书上架：128本中英文新书已入库"
+          data-body="本月共新增128本中英文电子书，涵盖历史人文、科幻小说、儿童绘本等多个分类。其中中文新书82本，英文新书46本。所有新书即日起可免费借阅，每位会员借阅期21天，可续借1次。"
+          onclick="openAnnounce(this)">
+          <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md flex-shrink-0 mt-0.5">新书</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">3月新书上架：128本中英文新书已入库</p>
+            <p class="text-xs text-gray-400 mt-0.5">2025-03-15</p>
+          </div>
+          <i class="fas fa-chevron-right text-gray-300 text-xs mt-1 flex-shrink-0"></i>
+        </div>
+        <div class="announce-item flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition"
+          data-tag="活动" data-date="2025-03-10"
+          data-title="NLB阅读节：4月线下活动报名开启"
+          data-body="NLB阅读节将于2025年4月12日至4月20日在国家图书馆（维多利亚街）举办。活动包括作者见面会、读书分享会、儿童阅读工作坊等多项精彩内容。报名免费，名额有限，请尽早通过NLB官网或本平台完成报名。"
+          onclick="openAnnounce(this)">
+          <span class="bg-green-600 text-white text-xs px-2 py-0.5 rounded-md flex-shrink-0 mt-0.5">活动</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">NLB阅读节：4月线下活动报名开启</p>
+            <p class="text-xs text-gray-400 mt-0.5">2025-03-10</p>
+          </div>
+          <i class="fas fa-chevron-right text-gray-300 text-xs mt-1 flex-shrink-0"></i>
+        </div>
+        <div class="announce-item flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition"
+          data-tag="提醒" data-date="2025-03-08"
+          data-title="系统维护通知：3月20日凌晨2-4时暂停服务"
+          data-body="为提升平台稳定性及用户体验，NLB eReads将于2025年3月20日凌晨2:00至4:00进行系统维护。维护期间平台将暂停所有服务，包括借阅、续借、推送及下载功能。已下载的离线书籍不受影响，可正常阅读。如有疑问请联系客服热线 6332 3255。"
+          onclick="openAnnounce(this)">
+          <span class="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-md flex-shrink-0 mt-0.5">提醒</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">系统维护通知：3月20日凌晨2-4时暂停服务</p>
+            <p class="text-xs text-gray-400 mt-0.5">2025-03-08</p>
+          </div>
+          <i class="fas fa-chevron-right text-gray-300 text-xs mt-1 flex-shrink-0"></i>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h3 class="font-bold text-gray-800 text-base mb-4" data-i18n="home.myborrow.title">我的借阅</h3>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <span class="text-sm text-gray-600" data-i18n="home.myborrow.active">借阅中</span>
+          <span class="font-bold text-lg" style="color:#0f4c81" id="stat-borrowing">3</span>
+        </div>
+        <div class="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+          <span class="text-sm text-gray-600" data-i18n="home.myborrow.expiring">即将到期</span>
+          <span class="font-bold text-lg text-red-600" id="stat-expiring">1</span>
+        </div>
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <span class="text-sm text-gray-600" data-i18n="home.myborrow.quota">剩余额度</span>
+          <span class="font-bold text-lg text-green-600" id="stat-quota">2/5</span>
+        </div>
+        <button class="w-full py-2.5 text-white rounded-xl text-sm font-medium transition hover:opacity-90" style="background:#0f4c81" data-nav="bookshelf">
+          <i class="fas fa-bookmark mr-2"></i><span data-i18n="home.myborrow.manage">管理书架</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+$(function () {
+  // ── AI 搜索知识库 ──
+  const BOOKS_SAMPLE = [
+    { title:'新加坡史', author:'柯木林', tag:'历史人文', lang:'中文', status:'available', rating:4.8, color:'linear-gradient(135deg,#0f4c81,#1a6bb5)' },
+    { title:'从第三世界到第一世界', author:'李光耀', tag:'历史人文', lang:'中文', status:'available', rating:4.9, color:'linear-gradient(135deg,#92400e,#d97706)' },
+    { title:'活着', author:'余华', tag:'文学小说', lang:'中文', status:'available', rating:4.9, color:'linear-gradient(135deg,#dc2626,#f97316)' },
+    { title:'三体', author:'刘慈欣', tag:'科幻小说', lang:'中文', status:'borrowed', rating:4.9, color:'linear-gradient(135deg,#7c3aed,#a855f7)' },
+    { title:'Singapore: A Biography', author:'Mark Ravinder Frost', tag:'History', lang:'English', status:'available', rating:4.7, color:'linear-gradient(135deg,#059669,#10b981)' },
+    { title:'The Singapore Story', author:'Lee Kuan Yew', tag:'History', lang:'English', status:'available', rating:4.8, color:'linear-gradient(135deg,#1e40af,#3b82f6)' },
+    { title:'Crazy Rich Asians', author:'Kevin Kwan', tag:'Fiction', lang:'English', status:'available', rating:4.6, color:'linear-gradient(135deg,#0891b2,#06b6d4)' },
+    { title:'人工智能时代', author:'李开复', tag:'科技商业', lang:'中文', status:'available', rating:4.7, color:'linear-gradient(135deg,#065f46,#34d399)' },
+    { title:'小王子（中文版）', author:'圣埃克苏佩里', tag:'少儿读物', lang:'中文', status:'available', rating:4.9, color:'linear-gradient(135deg,#be185d,#ec4899)' },
+    { title:'Sapiens', author:'Yuval Noah Harari', tag:'History', lang:'English', status:'available', rating:4.8, color:'linear-gradient(135deg,#374151,#6b7280)' },
+    { title:'Atomic Habits', author:'James Clear', tag:'Self-help', lang:'English', status:'borrowed', rating:4.7, color:'linear-gradient(135deg,#7c2d12,#ea580c)' },
+    { title:'新加坡华人史', author:'崔贵强', tag:'历史人文', lang:'中文', status:'available', rating:4.6, color:'linear-gradient(135deg,#134e4a,#0d9488)' },
+  ];
+
+  // AI 意图解析：从自然语言提取关键词/分类/语言
+  function aiParse(q) {
+    const t = q.toLowerCase();
+    const intent = { keywords:[], cat:'', lang:'', mood:'' };
+    if (/历史|史|建国|殖民|独立/.test(t)) intent.cat = '历史人文';
+    else if (/小说|文学|故事|fiction/.test(t)) intent.cat = '文学小说';
+    else if (/科技|商业|创业|ai|人工智能|tech/.test(t)) intent.cat = '科技商业';
+    else if (/儿童|少儿|kids|children/.test(t)) intent.cat = '少儿读物';
+    else if (/学术|academic/.test(t)) intent.cat = '学术专著';
+    else if (/本地|新加坡|local|singapore/.test(t)) intent.cat = '本地特色';
+    if (/英文|english/.test(t)) intent.lang = 'English';
+    else if (/中文|华文|chinese/.test(t)) intent.lang = '中文';
+    else if (/马来|malay/.test(t)) intent.lang = 'Malay';
+    else if (/泰米尔|tamil/.test(t)) intent.lang = 'Tamil';
+    if (/推荐|好看|经典|必读/.test(t)) intent.mood = 'recommend';
+    intent.keywords = q.replace(/[，。？！,.?!]/g,'').split(/\s+/).filter(k=>k.length>1);
+    return intent;
+  }
+
+  function aiSearch(q) {
+    const intent = aiParse(q);
+    let results = BOOKS_SAMPLE.filter(b => {
+      if (intent.lang && b.lang !== intent.lang) return false;
+      if (intent.cat && !b.tag.includes(intent.cat.slice(0,2))) return false;
+      return true;
+    });
+    // 关键词匹配兜底
+    if (!results.length) {
+      results = BOOKS_SAMPLE.filter(b =>
+        intent.keywords.some(k =>
+          b.title.toLowerCase().includes(k.toLowerCase()) ||
+          b.author.toLowerCase().includes(k.toLowerCase()) ||
+          b.tag.toLowerCase().includes(k.toLowerCase())
+        )
+      );
+    }
+    // 若仍无结果，返回评分最高的4本
+    if (!results.length) results = [...BOOKS_SAMPLE].sort((a,b)=>b.rating-a.rating).slice(0,4);
+    // 按评分排序，最多6条
+    return results.sort((a,b)=>b.rating-a.rating).slice(0,6);
+  }
+
+  function aiSummary(q, intent) {
+    const parts = [];
+    if (intent.cat) parts.push(`<strong>${intent.cat}</strong>`);
+    if (intent.lang) parts.push(`<strong>${intent.lang}</strong>`);
+    if (intent.mood === 'recommend') parts.push(t('ai.search.tag.recommend'));
+    if (parts.length) return `${t('ai.search.summary.prefix')} ${parts.join('·')} ${t('ai.search.summary.books')}`;
+    return t('ai.search.summary.related').replace('{q}', q);
+  }
+
+  function statusBadge(s) {
+    if (s==='available') return `<span style="background:#dcfce7;color:#16a34a;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;">${t('home.status.available')}</span>`;
+    if (s==='borrowed')  return `<span style="background:#fee2e2;color:#dc2626;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;">${t('home.status.borrowed')}</span>`;
+    return `<span style="background:#fef9c3;color:#ca8a04;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;">${t('home.status.reserved')}</span>`;
+  }
+
+  function showAiSearchModal(q) {
+    const intent = aiParse(q);
+    const $overlay = $(`
+      <div id="ai-search-overlay">
+        <div id="ai-search-modal">
+          <div class="ai-srch-hd">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-magic" style="color:#fff;font-size:14px;"></i>
+              </div>
+              <div style="flex:1;">
+                <p style="color:#fff;font-weight:600;font-size:14px;margin:0;">${t('ai.search.title')}</p>
+                <p style="color:rgba(255,255,255,.7);font-size:11px;margin:2px 0 0;">${t('ai.search.analyzing')}</p>
+              </div>
+              <button id="ai-srch-close" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.7);padding:6px;">
+                <i class="fas fa-times" style="font-size:14px;"></i>
+              </button>
+            </div>
+            <div style="margin-top:12px;background:rgba(255,255,255,.15);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+              <i class="fas fa-search" style="color:rgba(255,255,255,.6);font-size:12px;"></i>
+              <span style="color:#fff;font-size:13px;">${q}</span>
+            </div>
+          </div>
+          <div class="ai-srch-body" id="ai-srch-body">
+            <div style="display:flex;align-items:center;gap:8px;padding:20px 0;">
+              <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+              <span style="font-size:13px;color:#94a3b8;margin-left:4px;">${t('ai.search.loading')}</span>
+            </div>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($overlay);
+
+    // 关闭
+    $overlay.find('#ai-srch-close, #ai-search-overlay').on('click', function(e){
+      if (e.target === this) $overlay.remove();
+    });
+    $overlay.find('#ai-search-modal').on('click', e => e.stopPropagation());
+
+    // 模拟 AI 分析延迟后展示结果
+    setTimeout(() => {
+      const results = aiSearch(q);
+      const summary = aiSummary(q, intent);
+      const intentTags = [];
+      if (intent.cat) intentTags.push(`<span style="background:#eff6ff;color:#1d4ed8;font-size:11px;padding:3px 10px;border-radius:20px;">${intent.cat}</span>`);
+      if (intent.lang) intentTags.push(`<span style="background:#f0fdf4;color:#15803d;font-size:11px;padding:3px 10px;border-radius:20px;">${intent.lang}</span>`);
+      if (intent.mood==='recommend') intentTags.push(`<span style="background:#fff7ed;color:#c2410c;font-size:11px;padding:3px 10px;border-radius:20px;">${t('ai.search.tag.recommend')}</span>`);
+
+      const cardsHtml = results.map(b => `
+        <div class="ai-srch-card" onclick="navigateTo('book-detail')">
+          <div style="display:flex;gap:12px;padding:12px;">
+            <div style="width:44px;height:60px;border-radius:8px;flex-shrink:0;background:${b.color};display:flex;align-items:flex-end;padding:4px;">
+              <p style="color:#fff;font-size:8px;font-weight:700;line-height:1.2;word-break:break-all;">${b.title.slice(0,6)}</p>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                <p style="font-size:13px;font-weight:600;color:#1e293b;margin:0;line-height:1.3;">${b.title}</p>
+                ${statusBadge(b.status)}
+              </div>
+              <p style="font-size:11px;color:#64748b;margin:3px 0 0;">${b.author}</p>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:5px;">
+                <span style="font-size:10px;color:#94a3b8;">${b.tag} · ${b.lang}</span>
+                <span style="font-size:10px;color:#f59e0b;"><i class="fas fa-star" style="font-size:9px;"></i> ${b.rating}</span>
+              </div>
+            </div>
+          </div>
+        </div>`).join('');
+
+      $('#ai-srch-body').html(`
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <i class="fas fa-robot" style="color:#0f4c81;font-size:12px;"></i>
+            <p style="font-size:12px;color:#475569;margin:0;">${summary}</p>
+          </div>
+          ${intentTags.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${intentTags.join('')}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">${cardsHtml}</div>
+        <button id="ai-srch-more" style="width:100%;margin-top:14px;padding:10px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;font-size:13px;color:#0f4c81;cursor:pointer;font-family:inherit;transition:background .15s;"
+          onmouseenter="this.style.background='#eff6ff'" onmouseleave="this.style.background='#fff'">
+          <i class="fas fa-search mr-2"></i>${t('ai.search.more')}
+        </button>`);
+
+      // 更新副标题
+      $overlay.find('.ai-srch-hd p:last-child').text(t('ai.search.found', {n: results.length}));
+
+      // 查看全部 → 跳转搜索页
+      $('#ai-srch-more').on('click', () => {
+        sessionStorage.setItem('nlb_search_query', q);
+        $overlay.remove();
+        navigateTo('search');
+      });
+    }, 1200);
+  }
+
+  // Search
+  $('#btn-search').on('click', function () {
+    const q = $('#search-input').val().trim();
+    if (!q) return;
+    showAiSearchModal(q);
+  });
+  $('#search-input').on('keypress', function (e) {
+    if (e.which === 13) {
+      const q = $(this).val().trim();
+      if (!q) return;
+      showAiSearchModal(q);
+    }
+  });
+  // Category buttons
+  $('.cat-btn').on('click', function () {
+    $('.cat-btn').css({background:'',color:''}).addClass('text-gray-600');
+    $(this).css({background:'#0f4c81',color:'#fff'}).removeClass('text-gray-600');
+    const cat = $(this).data('cat');
+    sessionStorage.setItem('nlb_search_cat', cat);
+    sessionStorage.removeItem('nlb_search_query');
+    navigateTo('search');
+  });
+
+});
+
+// 公告详情弹窗（全局函数，供 onclick 直接调用）
+function openAnnounce(el) {
+  const tag   = el.dataset.tag;
+  const date  = el.dataset.date;
+  const title = el.dataset.title;
+  const body  = el.dataset.body;
+  const tagColors = { '新书':'#2563eb', '活动':'#16a34a', '提醒':'#f97316' };
+  const color = tagColors[tag] || '#6b7280';
+  const div = document.createElement('div');
+  div.className = 'fixed inset-0 bg-black/50 z-[99990] flex items-center justify-center p-4';
+  div.innerHTML = `
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-white text-xs px-2 py-0.5 rounded-md font-medium" style="background:${color}">${tag}</span>
+          <span class="text-xs text-gray-400">${date}</span>
+        </div>
+        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5">
+        <h3 class="font-semibold text-gray-800 text-sm leading-snug mb-3">${title}</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">${body}</p>
+      </div>
+      <div class="px-5 pb-5">
+        <button onclick="this.closest('.fixed').remove()" class="w-full py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">关闭</button>
+      </div>
+    </div>`;
+  div.addEventListener('click', function(e){ if (e.target === div) div.remove(); });
+  document.body.appendChild(div);
+}
+</script>
+<script src="home-integration.js"></script>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设备管理 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', accent: '#f97316' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family:'Inter',sans-serif; background:#f8fafc; }
+  .nav-shadow { box-shadow:0 2px 20px rgba(15,76,129,0.08); }
+  .device-card { transition:all 0.2s; border:2px solid transparent; }
+  .device-card:hover { border-color:#0f4c81; }
+  .device-active { border-color:#0f4c81; background:#f0f7ff; }
+  .status-success { background:#dcfce7; color:#16a34a; }
+  .status-pending { background:#fef9c3; color:#ca8a04; }
+  .status-failed { background:#fee2e2; color:#dc2626; }
+  .progress-bar { background:linear-gradient(90deg,#0f4c81,#1a6bb5); }
+  .scrollbar-hide::-webkit-scrollbar { display:none; }
+  .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
+  .tab-active { border-bottom:2px solid #0f4c81; color:#0f4c81; font-weight:600; }
+</style>
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+</head>
+<body class="min-h-screen">
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+
+<!-- Nav -->
+<nav class="bg-white nav-shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
+    <button class="flex items-center gap-2 text-gray-600 hover:text-primary transition">
+      <i class="fas fa-arrow-left text-sm"></i>
+      <span class="text-sm hidden sm:block">返回个人中心</span>
+    </button>
+    <div class="flex-1 flex justify-center">
+      <a href="#" class="flex items-center gap-2" data-nav="home">
+        <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+          <i class="fas fa-book-open text-white text-xs"></i>
+        </div>
+        <span class="font-bold text-primary hidden sm:block">NLB eReads</span>
+      </a>
+    </div>
+    <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+      <span class="text-white text-xs font-bold user-avatar-initial"></span>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-5xl mx-auto px-4 py-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900">推送与设备管理</h1>
+      <p class="text-sm text-gray-500 mt-0.5">管理阅读器绑定、推送记录与下载设置</p>
+    </div>
+    <button class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-dark transition flex items-center gap-2">
+      <i class="fas fa-plus"></i>添加设备
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex border-b border-gray-200 mb-5 bg-white rounded-t-2xl px-4 shadow-sm overflow-x-auto scrollbar-hide" id="device-tabs">
+    <button onclick="switchDeviceTab(this,'devices')" class="tab-active py-3 px-4 text-sm">我的设备</button>
+    <button onclick="switchDeviceTab(this,'push')" class="py-3 px-4 text-sm text-gray-500 hover:text-gray-700">推送记录</button>
+    <button onclick="switchDeviceTab(this,'format')" class="py-3 px-4 text-sm text-gray-500 hover:text-gray-700">格式设置</button>
+    <button onclick="switchDeviceTab(this,'download')" class="py-3 px-4 text-sm text-gray-500 hover:text-gray-700">下载管理</button>
+  </div>
+
+  <!-- Tab: Devices -->
+  <div id="tab-devices">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" id="devices-list">
+
+      <!-- Add Device Card -->
+      <div class="bg-white rounded-2xl shadow-sm border-2 border-dashed border-gray-200 p-5 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-blue-50 transition min-h-48">
+        <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-3">
+          <i class="fas fa-plus text-gray-400 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600">添加新设备</p>
+        <p class="text-xs text-gray-400 mt-1 text-center">支持 Kindle、Kobo、文石、掌阅等</p>
+      </div>
+    </div>
+
+    <!-- Supported Devices Info -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h3 class="font-semibold text-gray-800 text-sm mb-4 flex items-center gap-2">
+        <i class="fas fa-info-circle text-primary"></i>支持的设备类型
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <i class="fas fa-tablet-alt text-amber-500 text-lg"></i>
+          <div>
+            <p class="text-xs font-medium text-gray-700">Kindle</p>
+            <p class="text-xs text-gray-400">MOBI/AZW3</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <i class="fas fa-book-reader text-blue-500 text-lg"></i>
+          <div>
+            <p class="text-xs font-medium text-gray-700">Kobo</p>
+            <p class="text-xs text-gray-400">EPUB</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <i class="fas fa-mobile-alt text-green-500 text-lg"></i>
+          <div>
+            <p class="text-xs font-medium text-gray-700">文石 BOOX</p>
+            <p class="text-xs text-gray-400">EPUB/PDF</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <i class="fas fa-tablet text-purple-500 text-lg"></i>
+          <div>
+            <p class="text-xs font-medium text-gray-700">掌阅 iReader</p>
+            <p class="text-xs text-gray-400">EPUB/TXT</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Push Records -->
+  <div id="tab-push" class="hidden">
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-800 text-sm">推送记录</h3>
+        <div class="flex items-center gap-2">
+          <select class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none">
+            <option>全部设备</option>
+            <option>Kindle Paperwhite</option>
+            <option>Kobo Libra 2</option>
+          </select>
+          <select class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none">
+            <option>全部状态</option>
+            <option>推送成功</option>
+            <option>推送中</option>
+            <option>推送失败</option>
+          </select>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-50">
+        <!-- Record 1 -->
+        <div class="px-5 py-4 flex items-center gap-4">
+          <div class="w-10 h-14 rounded-lg flex-shrink-0 flex items-end p-1.5" style="background:linear-gradient(135deg,#0f4c81,#1a6bb5)">
+            <p class="text-white text-xs font-bold leading-tight" style="font-size:8px">新加坡史</p>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">新加坡史</p>
+            <p class="text-xs text-gray-400 mt-0.5">推送至 Kindle Paperwhite · MOBI格式</p>
+            <p class="text-xs text-gray-400 mt-0.5">2025-03-18 14:32</p>
+          </div>
+          <span class="status-success text-xs px-3 py-1 rounded-full font-medium flex-shrink-0">推送成功</span>
+        </div>
+        <!-- Record 2 -->
+        <div class="px-5 py-4 flex items-center gap-4">
+          <div class="w-10 h-14 rounded-lg flex-shrink-0 flex items-end p-1.5" style="background:linear-gradient(135deg,#dc2626,#f97316)">
+            <p class="text-white text-xs font-bold leading-tight" style="font-size:8px">活着</p>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">活着</p>
+            <p class="text-xs text-gray-400 mt-0.5">推送至 Kobo Libra 2 · EPUB格式</p>
+            <p class="text-xs text-gray-400 mt-0.5">2025-03-17 09:15</p>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="status-pending text-xs px-3 py-1 rounded-full font-medium">推送中</span>
+            <div class="w-16 bg-gray-100 rounded-full h-1.5">
+              <div class="progress-bar h-1.5 rounded-full" style="width:65%"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Record 3 -->
+        <div class="px-5 py-4 flex items-center gap-4">
+          <div class="w-10 h-14 rounded-lg flex-shrink-0 flex items-end p-1.5" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">
+            <p class="text-white text-xs font-bold leading-tight" style="font-size:8px">三体</p>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">三体</p>
+            <p class="text-xs text-gray-400 mt-0.5">推送至 Kindle Paperwhite · MOBI格式</p>
+            <p class="text-xs text-gray-400 mt-0.5">2025-03-15 20:44</p>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="status-failed text-xs px-3 py-1 rounded-full font-medium">推送失败</span>
+            <button class="text-xs text-primary hover:underline">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Format Settings -->
+  <div id="tab-format" class="hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+            <i class="fas fa-tablet-alt text-amber-600"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-800 text-sm">Kindle Paperwhite</h3>
+            <p class="text-xs text-gray-400">格式适配设置</p>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">默认推送格式</span>
+            <select class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none">
+              <option>MOBI (推荐)</option>
+              <option>AZW3</option>
+              <option>PDF</option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">自动转换格式</span>
+            <div class="w-10 h-5 bg-primary rounded-full relative cursor-pointer">
+              <div class="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5 shadow"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">包含封面图片</span>
+            <div class="w-10 h-5 bg-primary rounded-full relative cursor-pointer">
+              <div class="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5 shadow"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">推送前确认</span>
+            <div class="w-10 h-5 bg-gray-200 rounded-full relative cursor-pointer">
+              <div class="w-4 h-4 bg-white rounded-full absolute left-0.5 top-0.5 shadow"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+            <i class="fas fa-book-reader text-blue-600"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-800 text-sm">Kobo Libra 2</h3>
+            <p class="text-xs text-gray-400">格式适配设置</p>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">默认推送格式</span>
+            <select class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none">
+              <option>EPUB (推荐)</option>
+              <option>PDF</option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">自动转换格式</span>
+            <div class="w-10 h-5 bg-primary rounded-full relative cursor-pointer">
+              <div class="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5 shadow"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">包含封面图片</span>
+            <div class="w-10 h-5 bg-primary rounded-full relative cursor-pointer">
+              <div class="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5 shadow"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-700">推送前确认</span>
+            <div class="w-10 h-5 bg-primary rounded-full relative cursor-pointer">
+              <div class="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5 shadow"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Download Management -->
+  <div id="tab-download" class="hidden">
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-800 text-sm">离线下载管理</h3>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-gray-400">已用 1.2GB / 5GB</span>
+          <button class="text-xs text-red-500 hover:underline">清理缓存</button>
+        </div>
+      </div>
+      <!-- Storage Bar -->
+      <div class="px-5 py-3 border-b border-gray-50">
+        <div class="w-full bg-gray-100 rounded-full h-2">
+          <div class="progress-bar h-2 rounded-full" style="width:24%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-400 mt-1">
+          <span>已使用 1.2GB</span>
+          <span>剩余 3.8GB</span>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-50">
+        <div class="px-5 py-4 flex items-center gap-4">
+          <div class="w-10 h-14 rounded-lg flex-shrink-0 flex items-end p-1.5" style="background:linear-gradient(135deg,#0f4c81,#1a6bb5)">
+            <p class="text-white font-bold leading-tight" style="font-size:8px">新加坡史</p>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">新加坡史</p>
+            <p class="text-xs text-gray-400 mt-0.5">EPUB · 8.2MB · 下载于 2025-03-18</p>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">已下载</span>
+              <span class="text-xs text-gray-400">可离线阅读</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button class="text-xs text-primary hover:underline">阅读</button>
+            <button class="text-xs text-red-500 hover:underline">删除</button>
+          </div>
+        </div>
+        <div class="px-5 py-4 flex items-center gap-4">
+          <div class="w-10 h-14 rounded-lg flex-shrink-0 flex items-end p-1.5" style="background:linear-gradient(135deg,#dc2626,#f97316)">
+            <p class="text-white font-bold leading-tight" style="font-size:8px">活着</p>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">活着</p>
+            <p class="text-xs text-gray-400 mt-0.5">EPUB · 3.1MB · 下载于 2025-03-15</p>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">已下载</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button class="text-xs text-primary hover:underline">阅读</button>
+            <button class="text-xs text-red-500 hover:underline">删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchDeviceTab(btn, tab) {
+  document.querySelectorAll('#device-tabs button').forEach(b => {
+    b.classList.remove('tab-active');
+    b.classList.add('text-gray-500');
+  });
+  btn.classList.add('tab-active');
+  btn.classList.remove('text-gray-500');
+  ['devices','push','format','download'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
+}
+</script>
+</body>
+</html>
+<script>
+$(function(){
+  // 全局 data-nav 跳转
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+
+  // 返回个人中心（顶部左箭头）
+  $('nav button:has(.fa-arrow-left)').on('click', function(){ navigateTo('profile'); });
+
+  // 添加设备按钮（顶部 + 卡片）
+  $(document).on('click', 'button:contains("添加设备"), .add-device-card', function(){
+    showAddDeviceModal();
+  });
+
+  // 推送书籍按钮（设备卡片内）
+  $(document).on('click', '.device-card button:contains("推送书籍")', function(){
+    const deviceName = $(this).closest('.device-card').find('h3').text().trim();
+    showPushSelectModal(deviceName);
+  });
+
+  // 设备卡片设置按钮（⚙️）
+  $(document).on('click', '.device-card button:has(.fa-cog)', function(){
+    const deviceName = $(this).closest('.device-card').find('h3').text().trim();
+    showToast('正在打开 ' + deviceName + ' 的设置...');
+    setTimeout(function(){ switchDeviceTab($('#device-tabs button').eq(2)[0], 'format'); }, 600);
+  });
+
+  // 设备卡片菜单按钮（⋮）
+  $(document).on('click', '.device-card button:has(.fa-ellipsis-v)', function(e){
+    e.stopPropagation();
+    $('.device-menu').remove();
+    const $btn = $(this);
+    const $card = $btn.closest('.device-card');
+    const deviceName = $card.find('h3').text().trim();
+    const $menu = $(`
+      <div class="device-menu absolute bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-1 w-36" style="right:1rem;top:3.5rem">
+        <button class="menu-rename w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">重命名</button>
+        <button class="menu-test w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">测试连接</button>
+        <button class="menu-delete w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">解绑设备</button>
+      </div>`);
+    $card.css('position','relative').append($menu);
+    $menu.find('.menu-rename').on('click', function(){
+      $menu.remove();
+      showInputModal('重命名设备', deviceName, function(newName){
+        if (newName) { $card.find('h3').text(newName); showToast('设备已重命名为：' + newName); }
+      });
+    });
+    $menu.find('.menu-test').on('click', function(){
+      $menu.remove();
+      showToast('正在测试连接 ' + deviceName + '...');
+      setTimeout(function(){ showToast('连接正常 ✓'); }, 1500);
+    });
+    $menu.find('.menu-delete').on('click', function(){
+      $menu.remove();
+      showConfirm('解绑《' + deviceName + '》？', '解绑后推送记录将保留', function(){
+        $card.fadeOut(400, function(){ $(this).remove(); });
+        showToast(deviceName + ' 已解绑');
+      });
+    });
+    $(document).one('click', function(){ $menu.remove(); });
+  });
+
+  // 推送记录：重试失败推送
+  $(document).on('click', 'button:contains("重试")', function(){
+    const $btn = $(this);
+    const $row = $btn.closest('[class*="px-5"]');
+    $btn.html('<i class="fas fa-spinner fa-spin mr-1"></i>重试中...').prop('disabled', true);
+    setTimeout(function(){
+      $btn.html('重试成功').css('color','#16a34a').prop('disabled', false);
+      $row.find('.status-failed').removeClass('status-failed').addClass('status-success').text('推送成功');
+      showToast('重新推送成功');
+    }, 1800);
+  });
+
+  // 推送记录：查看详情
+  $(document).on('click', 'button:contains("详情")', function(){
+    const $row = $(this).closest('[class*="px-5"]');
+    const bookName = $row.find('p.font-medium').text();
+    showToast('《' + bookName + '》推送详情：已送达设备');
+  });
+
+  // 格式设置：toggle 开关
+  $(document).on('click', '#tab-format .rounded-full.cursor-pointer', function(){
+    const $toggle = $(this);
+    const $dot = $toggle.find('div');
+    const isOn = $toggle.hasClass('bg-primary');
+    const label = $toggle.closest('.flex').find('span.text-sm').text().trim();
+    if (isOn) {
+      $toggle.removeClass('bg-primary').addClass('bg-gray-200');
+      $dot.css({'left':'0.125rem','right':'auto'});
+    } else {
+      $toggle.removeClass('bg-gray-200').addClass('bg-primary');
+      $dot.css({'right':'0.125rem','left':'auto'});
+    }
+    showToast(label + (isOn ? ' 已关闭' : ' 已开启'));
+  });
+
+  // 格式设置：select 变更
+  $(document).on('change', '#tab-format select', function(){
+    const format = $(this).val().split(' ')[0];
+    const device = $(this).closest('[class*="rounded-2xl"]').find('h3').text().trim();
+    showToast(device + ' 默认格式已设为 ' + format);
+  });
+
+  // 下载管理：阅读按钮
+  $(document).on('click', '#tab-download button:contains("阅读")', function(){
+    navigateTo('reading');
+  });
+
+  // 下载管理：删除按钮
+  $(document).on('click', '#tab-download button:contains("删除")', function(){
+    const $btn = $(this);
+    const $row = $btn.closest('[class*="px-5 py-4"]');
+    const bookName = $row.find('p.font-medium').text();
+    showConfirm('删除《' + bookName + '》的离线文件？', '删除后需重新下载', function(){
+      $row.fadeOut(400, function(){ $(this).remove(); });
+      showToast('《' + bookName + '》离线文件已删除');
+    });
+  });
+
+  // 下载管理：清理缓存
+  $(document).on('click', '#tab-download button:contains("清理缓存")', function(){
+    showConfirm('清理所有离线缓存？', '清理后需重新下载书籍', function(){
+      $('#tab-download [class*="divide-y"] > div').fadeOut(400, function(){ $(this).remove(); });
+      showToast('缓存已清理，释放 11.3 MB');
+    });
+  });
+
+  // ---- 弹窗函数 ----
+  function showPushSelectModal(deviceName){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-paper-plane text-primary text-sm"></i>推送至 ${deviceName}
+          </h3>
+          <p class="text-xs text-gray-400 mb-3">选择要推送的书籍</p>
+          <div class="space-y-2 mb-4">
+            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" class="push-book-check" checked>
+              <span class="text-sm text-gray-700">新加坡史</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" class="push-book-check">
+              <span class="text-sm text-gray-700">活着</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" class="push-book-check">
+              <span class="text-sm text-gray-700">从第三世界到第一世界</span>
+            </label>
+          </div>
+          <div class="flex gap-3">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-push flex-1 py-2.5 text-white rounded-xl text-sm font-medium" style="background:#0f4c81">开始推送</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-push').on('click', function(){
+      const count = $modal.find('.push-book-check:checked').length;
+      if (!count) { showToast('请至少选择一本书'); return; }
+      $modal.remove();
+      showPushProgressModal(deviceName, count);
+    });
+  }
+
+  function showPushProgressModal(deviceName, count){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl text-center">
+          <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-paper-plane text-primary text-2xl"></i>
+          </div>
+          <h3 class="font-semibold text-gray-800">推送至 ${deviceName}</h3>
+          <p class="text-xs text-gray-400 mt-1 mb-4">共 ${count} 本书籍</p>
+          <div class="w-full bg-gray-100 rounded-full h-2 mb-2">
+            <div id="push-prog" class="bg-primary h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+          </div>
+          <p id="push-stat" class="text-xs text-gray-400 mb-4">准备推送...</p>
+          <button id="push-cancel-btn" class="w-full py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    let progress = 0;
+    const timer = setInterval(function(){
+      progress += Math.random() * 20 + 5;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(timer);
+        $('#push-stat').text('推送完成！共 ' + count + ' 本').css('color','#16a34a');
+        $('#push-prog').css({'width':'100%','background':'#16a34a'});
+        $('#push-cancel-btn').text('完成');
+      } else {
+        $('#push-stat').text('推送中... ' + Math.round(progress) + '%');
+      }
+      $('#push-prog').css('width', Math.min(progress,100) + '%');
+    }, 400);
+    $('#push-cancel-btn').on('click', function(){ clearInterval(timer); $modal.remove(); });
+  }
+
+  function showAddDeviceModal(){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-plus-circle text-primary text-sm"></i>添加新设备
+          </h3>
+          <div class="mb-3">
+            <label class="text-xs text-gray-500 mb-1 block">设备类型</label>
+            <select id="add-device-type" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
+              <option>Kindle</option>
+              <option>Kobo</option>
+              <option>文石 BOOX</option>
+              <option>其他阅读器</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="text-xs text-gray-500 mb-1 block">设备名称</label>
+            <input type="text" id="add-device-name" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="如：我的 Kindle">
+          </div>
+          <div class="mb-4">
+            <label class="text-xs text-gray-500 mb-1 block">推送邮箱（Kindle）/ WiFi地址</label>
+            <input type="text" id="add-device-email" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="xxx@kindle.com">
+          </div>
+          <div class="flex gap-3">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-add flex-1 py-2.5 text-white rounded-xl text-sm font-medium" style="background:#0f4c81">绑定设备</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-add').on('click', function(){
+      const name = $('#add-device-name').val().trim() || $('#add-device-type').val();
+      $modal.remove();
+      showToast('设备「' + name + '」绑定成功');
+    });
+  }
+
+  function showConfirm(title, desc, onConfirm){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl text-center">
+          <i class="fas fa-exclamation-circle text-orange-400 text-3xl mb-3"></i>
+          <h3 class="font-semibold text-gray-800 mb-1">${title}</h3>
+          <p class="text-sm text-gray-400 mb-5">${desc}</p>
+          <div class="flex gap-3">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-ok flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium">确认</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-ok').on('click', function(){ $modal.remove(); onConfirm(); });
+  }
+
+  function showInputModal(title, placeholder, onSave){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 class="font-semibold text-gray-800 mb-4">${title}</h3>
+          <input type="text" class="modal-input w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" value="${placeholder}">
+          <div class="flex gap-3 mt-4">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-save flex-1 py-2.5 text-white rounded-xl text-sm font-medium" style="background:#0f4c81">保存</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-save').on('click', function(){
+      const val = $modal.find('.modal-input').val();
+      $modal.remove();
+      onSave(val);
+    });
+  }
+
+  function showToast(msg){
+    const $t = $('<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg z-50 whitespace-nowrap">' + msg + '</div>');
+    $('body').append($t);
+    setTimeout(function(){ $t.fadeOut(300, function(){ $(this).remove(); }); }, 2200);
+  }
+});
+</script>
+</script>
+<script src="devices-integration.js"></script>
+</body>
+</html>

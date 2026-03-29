@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人中心 - NLB eReads</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', accent: '#f97316' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family:'Inter',sans-serif; background:#f8fafc; }
+  .nav-shadow { box-shadow:0 2px 20px rgba(15,76,129,0.08); }
+  .hero-gradient { background:linear-gradient(135deg,#0f4c81 0%,#1a6bb5 60%,#0e7490 100%); }
+  .setting-row:hover { background:#f8fafc; }
+  .toggle-on { background:#0f4c81; }
+  .toggle-off { background:#d1d5db; }
+</style>
+<script src="i18n.js"></script>
+<script src="nav.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+<script src="profile-integration.js"></script>
+</head>
+<body class="min-h-screen">
+
+<!-- Nav -->
+<nav class="bg-white nav-shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
+    <a href="#" class="flex items-center gap-2" data-nav="home">
+      <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+        <i class="fas fa-book-open text-white text-xs"></i>
+      </div>
+      <span class="font-bold text-primary hidden sm:block">NLB eReads</span>
+    </a>
+    <div class="flex-1"></div>
+    <button class="p-2 text-gray-500 hover:text-primary"><i class="fas fa-bell"></i></button>
+  </div>
+</nav>
+
+<div class="max-w-4xl mx-auto px-4 py-6">
+
+  <!-- Profile Hero -->
+  <div class="hero-gradient rounded-2xl p-6 mb-6 relative overflow-hidden">
+    <div class="absolute right-0 top-0 opacity-10">
+      <i class="fas fa-user-circle text-white" style="font-size:160px;position:absolute;right:-20px;top:-20px;"></i>
+    </div>
+    <div class="relative z-10 flex items-center gap-5">
+      <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+        <span class="text-white text-2xl font-bold user-avatar-initial"></span>
+      </div>
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-white" id="profile-name"></h2>
+        <p class="text-blue-200 text-sm mt-0.5" id="profile-card-no"></p>
+        <div class="flex items-center gap-3 mt-2">
+          <span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full">
+            <i class="fas fa-check-circle mr-1"></i>已认证会员
+          </span>
+          <span class="bg-amber-400/30 text-amber-200 text-xs px-3 py-1 rounded-full">
+            <i class="fas fa-star mr-1"></i>积分 1,280
+          </span>
+        </div>
+      </div>
+      <button class="flex-shrink-0 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl text-sm transition">
+        <i class="fas fa-edit mr-1"></i>编辑资料
+      </button>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+      <p class="text-xl font-bold text-white" id="stat-total-borrowed">0</p>
+        <p class="text-blue-200 text-xs mt-0.5">累计借阅</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+        <p class="text-xl font-bold text-white">128h</p>
+        <p class="text-blue-200 text-xs mt-0.5">阅读时长</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+      <p class="text-xl font-bold text-white" id="stat-reading">0</p>
+        <p class="text-blue-200 text-xs mt-0.5">借阅中</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+      <p class="text-xl font-bold text-white" id="stat-quota">0/0</p>
+        <p class="text-blue-200 text-xs mt-0.5">借阅额度</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Left Column -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Account Info -->
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-id-card text-primary text-sm"></i>账号信息
+          </h3>
+          <button class="text-xs text-primary hover:underline">管理</button>
+        </div>
+        <div class="divide-y divide-gray-50">
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-user text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">姓名</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500" id="profile-field-name"></span>
+              <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+            </div>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-mobile-alt text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">手机号码</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500" id="profile-field-phone"></span>
+              <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+            </div>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-envelope text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">电子邮件</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500" id="profile-field-email"></span>
+              <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+            </div>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-lock text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">密码与安全</span>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-users text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">家属绑定</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">已绑定 2人</span>
+              <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reading Settings -->
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-book-reader text-primary text-sm"></i>阅读设置
+          </h3>
+        </div>
+        <div class="divide-y divide-gray-50">
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-moon text-gray-400 w-4 text-center text-sm"></i>
+              <div>
+                <p class="text-sm text-gray-700">默认阅读模式</p>
+                <p class="text-xs text-gray-400">护眼模式</p>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-sync-alt text-gray-400 w-4 text-center text-sm"></i>
+              <div>
+                <p class="text-sm text-gray-700">跨设备同步</p>
+                <p class="text-xs text-gray-400">自动同步阅读进度</p>
+              </div>
+            </div>
+            <button class="toggle-on w-10 h-6 rounded-full relative transition-colors" onclick="this.classList.toggle('toggle-on');this.classList.toggle('toggle-off')">
+              <span class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
+            </button>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-robot text-gray-400 w-4 text-center text-sm"></i>
+              <div>
+                <p class="text-sm text-gray-700">智能推荐</p>
+                <p class="text-xs text-gray-400">基于阅读偏好推荐书籍</p>
+              </div>
+            </div>
+            <button class="toggle-on w-10 h-6 rounded-full relative transition-colors">
+              <span class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow"></span>
+            </button>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-tablet-alt text-gray-400 w-4 text-center text-sm"></i>
+              <div>
+                <p class="text-sm text-gray-700">设备管理</p>
+                <p class="text-xs text-gray-400">Kindle · 国产阅读器</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">2台设备</span>
+              <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-bell text-primary text-sm"></i>消息提醒
+          </h3>
+        </div>
+        <div class="divide-y divide-gray-50">
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-clock text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">到期提醒</span>
+            </div>
+            <button class="toggle-on w-10 h-6 rounded-full relative">
+              <span class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow"></span>
+            </button>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-book text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">新书上架通知</span>
+            </div>
+            <button class="toggle-on w-10 h-6 rounded-full relative">
+              <span class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow"></span>
+            </button>
+          </div>
+          <div class="setting-row px-5 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-calendar text-gray-400 w-4 text-center text-sm"></i>
+              <span class="text-sm text-gray-700">活动通知</span>
+            </div>
+            <button class="toggle-off w-10 h-6 rounded-full relative">
+              <span class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column -->
+    <div class="space-y-4">
+
+      <!-- Borrowing Quota -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="font-semibold text-gray-800 text-sm mb-4 flex items-center gap-2">
+          <i class="fas fa-tachometer-alt text-primary text-sm"></i>借阅额度
+        </h3>
+        <div class="text-center mb-4">
+          <div class="relative w-24 h-24 mx-auto">
+            <svg class="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+              <circle id="quota-circle" cx="18" cy="18" r="15.9" fill="none" stroke="#0f4c81" stroke-width="3" stroke-dasharray="0 100" stroke-linecap="round"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-xl font-bold text-primary" id="quota-label">0/0</span>
+              <span class="text-xs text-gray-400">已用</span>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between text-gray-600">
+            <span>电子书借阅</span><span class="font-medium">3 / 5 本</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>借阅期限</span><span class="font-medium">21天/本</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>续借次数</span><span class="font-medium">2次/本</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Points & Achievements -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="font-semibold text-gray-800 text-sm mb-4 flex items-center gap-2">
+          <i class="fas fa-star text-amber-400 text-sm"></i>积分与成就
+        </h3>
+        <div class="bg-amber-50 rounded-xl p-3 mb-4 text-center">
+          <p class="text-2xl font-bold text-amber-600">1,280</p>
+          <p class="text-xs text-amber-500 mt-0.5">阅读积分</p>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div class="text-center p-2 bg-blue-50 rounded-xl">
+            <i class="fas fa-book text-blue-500 text-lg"></i>
+            <p class="text-xs text-gray-500 mt-1">书虫</p>
+          </div>
+          <div class="text-center p-2 bg-green-50 rounded-xl">
+            <i class="fas fa-fire text-green-500 text-lg"></i>
+            <p class="text-xs text-gray-500 mt-1">连续7天</p>
+          </div>
+          <div class="text-center p-2 bg-gray-50 rounded-xl opacity-40">
+            <i class="fas fa-trophy text-gray-400 text-lg"></i>
+            <p class="text-xs text-gray-400 mt-1">未解锁</p>
+          </div>
+        </div>
+        <button class="w-full py-2 border border-amber-300 text-amber-600 rounded-xl text-xs font-medium hover:bg-amber-50 transition">
+          <i class="fas fa-gift mr-1"></i>积分兑换
+        </button>
+      </div>
+
+      <!-- Reading Report -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+          <i class="fas fa-chart-bar text-primary text-sm"></i>阅读报告
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+              <span>本月阅读</span><span class="font-medium text-gray-700">18小时</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5">
+              <div class="bg-primary h-1.5 rounded-full" style="width:72%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+              <span>完读率</span><span class="font-medium text-gray-700">85%</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5">
+              <div class="bg-green-500 h-1.5 rounded-full" style="width:85%"></div>
+            </div>
+          </div>
+        </div>
+        <button class="w-full mt-4 py-2 bg-primary text-white rounded-xl text-xs font-medium hover:bg-primary-dark transition">
+          <i class="fas fa-file-alt mr-1"></i>查看完整报告
+        </button>
+      </div>
+
+      <!-- Logout -->
+      <button id="btn-logout" class="w-full py-3 border border-red-200 text-red-500 rounded-2xl text-sm font-medium hover:bg-red-50 transition flex items-center justify-center gap-2">
+        <i class="fas fa-sign-out-alt"></i>退出登录
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
+<script>
+$(function(){
+  // 全局 data-nav 跳转
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+
+  // 退出登录 → 确认弹窗
+  $('#btn-logout').on('click', function(){
+    showConfirm('确认退出登录？', '退出后需重新验证借书证', function(){
+      localStorage.clear();
+      sessionStorage.clear();
+      navigateTo('login');
+    });
+  });
+
+  // 所有 toggle 开关统一处理（替换 onclick）
+  $(document).on('click', '.toggle-on, .toggle-off', function(){
+    const $btn = $(this);
+    const isOn = $btn.hasClass('toggle-on');
+    const label = $btn.closest('.flex').find('.text-sm.text-gray-700, span.text-sm.text-gray-700').first().text().trim();
+    $btn.toggleClass('toggle-on toggle-off');
+    const $dot = $btn.find('span');
+    if ($btn.hasClass('toggle-on')) {
+      $dot.css({'right':'0.25rem','left':'auto'});
+    } else {
+      $dot.css({'left':'0.25rem','right':'auto'});
+    }
+    showToast(label + ($btn.hasClass('toggle-on') ? ' 已开启' : ' 已关闭'));
+  });
+
+  // 设备管理行 → 设备管理页
+  $(document).on('click', '.setting-row:has(.fa-tablet-alt)', function(){
+    navigateTo('devices');
+  });
+
+  // 账号信息各行 → 编辑弹窗
+  $(document).on('click', '.setting-row:has(.fa-chevron-right)', function(e){
+    if ($(e.target).closest('.toggle-on, .toggle-off').length) return;
+    if ($(this).find('.fa-tablet-alt').length) return; // 设备管理已处理
+    const label = $(this).find('.text-sm.text-gray-700').first().text().trim();
+    const current = $(this).find('.text-sm.text-gray-500').first().text().trim();
+    if (label && label !== '设备管理') {
+      showEditModal(label, current);
+    }
+  });
+
+  // 编辑资料按钮
+  $(document).on('click', 'button:contains("编辑资料")', function(){
+    showEditModal('昵称', '陈小明');
+  });
+
+  // 积分兑换
+  $(document).on('click', 'button:contains("积分兑换")', function(){
+    showToast('积分兑换功能即将上线，敬请期待');
+  });
+
+  // 查看完整报告
+  $(document).on('click', 'button:contains("查看完整报告")', function(){
+    showReportModal();
+  });
+
+  // 书架入口
+  $(document).on('click', 'button:contains("管理书架"), button:contains("我的书架")', function(){
+    navigateTo('bookshelf');
+  });
+
+  // 帮助中心
+  $(document).on('click', 'button:contains("帮助"), a:contains("帮助")', function(){
+    navigateTo('help');
+  });
+
+  // ---- 工具函数 ----
+  function showToast(msg){
+    const $t = $('<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg z-50 whitespace-nowrap">' + msg + '</div>');
+    $('body').append($t);
+    setTimeout(function(){ $t.fadeOut(300, function(){ $(this).remove(); }); }, 2000);
+  }
+
+  function showConfirm(title, desc, onConfirm){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl text-center">
+          <i class="fas fa-sign-out-alt text-red-400 text-3xl mb-3"></i>
+          <h3 class="font-semibold text-gray-800 mb-1">${title}</h3>
+          <p class="text-sm text-gray-400 mb-5">${desc}</p>
+          <div class="flex gap-3">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-ok flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium">确认退出</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-ok').on('click', function(){ $modal.remove(); onConfirm(); });
+  }
+
+  function showEditModal(label, current){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 class="font-semibold text-gray-800 mb-4">修改${label}</h3>
+          <input type="text" class="edit-input w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" value="${current}" placeholder="请输入${label}">
+          <div class="flex gap-3 mt-4">
+            <button class="btn-cancel flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button class="btn-save flex-1 py-2.5 text-white rounded-xl text-sm font-medium" style="background:#0f4c81">保存</button>
+          </div>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-cancel').on('click', function(){ $modal.remove(); });
+    $modal.find('.btn-save').on('click', function(){
+      const val = $modal.find('.edit-input').val();
+      $modal.remove();
+      showToast(label + '已更新');
+    });
+  }
+
+  function showReportModal(){
+    const $modal = $(`
+      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-semibold text-gray-800">2025年3月 阅读报告</h3>
+            <button class="btn-close text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-blue-50 rounded-xl p-3 text-center">
+              <p class="text-2xl font-bold" style="color:#0f4c81">18h</p>
+              <p class="text-xs text-gray-500 mt-0.5">本月阅读时长</p>
+            </div>
+            <div class="bg-green-50 rounded-xl p-3 text-center">
+              <p class="text-2xl font-bold text-green-600">3</p>
+              <p class="text-xs text-gray-500 mt-0.5">完成借阅</p>
+            </div>
+            <div class="bg-amber-50 rounded-xl p-3 text-center">
+              <p class="text-2xl font-bold text-amber-600">85%</p>
+              <p class="text-xs text-gray-500 mt-0.5">完读率</p>
+            </div>
+            <div class="bg-purple-50 rounded-xl p-3 text-center">
+              <p class="text-2xl font-bold text-purple-600">12</p>
+              <p class="text-xs text-gray-500 mt-0.5">阅读笔记</p>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 text-center mb-4">最爱分类：历史人文 · 连续阅读 7 天</p>
+          <button class="btn-close w-full py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">关闭</button>
+        </div>
+      </div>`);
+    $('body').append($modal);
+    $modal.find('.btn-close').on('click', function(){ $modal.remove(); });
+  }
+});
+</script>

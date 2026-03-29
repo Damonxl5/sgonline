@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="admin.nav.users">用户管理 - NLB Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: { extend: { colors: { primary: '#0f4c81', 'primary-dark': '#0a3560' }, fontFamily: { sans: ['Inter','sans-serif'] } } }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .sidebar { background: #0f172a; width: 240px; transition: all 0.3s; }
+  .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+  .sidebar-link:hover { background: #1e293b; color: #fff; }
+  .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
+  .main-content { background: #f8fafc; flex: 1; height: 100vh; overflow-y: auto; }
+  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 40; }
+  .table-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden; }
+</style>
+<script src="nav.js"></script>
+<script src="i18n.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<aside class="sidebar flex-shrink-0 flex flex-col h-screen">
+  <div class="h-16 flex items-center gap-3 px-6 border-b border-gray-800">
+    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+      <i class="fas fa-shield-alt text-white text-sm"></i>
+    </div>
+    <span class="text-white font-bold tracking-wide">NLB Admin</span>
+  </div>
+
+  <nav class="flex-1 py-4 space-y-1">
+    <a href="#" class="sidebar-link" data-nav="admin-dashboard">
+      <i class="fas fa-chart-line w-5 text-center"></i>
+      <span data-i18n="admin.nav.dashboard">管理大盘</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-books">
+      <i class="fas fa-book w-5 text-center"></i>
+      <span data-i18n="admin.nav.books">书籍管理</span>
+    </a>
+    <a href="#" class="sidebar-link active" data-nav="admin-users">
+      <i class="fas fa-users w-5 text-center"></i>
+      <span data-i18n="admin.nav.users">用户管理</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-borrows">
+      <i class="fas fa-exchange-alt w-5 text-center"></i>
+      <span data-i18n="admin.nav.borrows">借阅记录</span>
+    </a>
+    <a href="#" class="sidebar-link" data-nav="admin-notices">
+      <i class="fas fa-bullhorn w-5 text-center"></i>
+      <span data-i18n="admin.nav.notices">系统公告</span>
+    </a>
+  </nav>
+
+  <div class="p-4 border-t border-gray-800">
+    <button class="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition" data-nav="admin-login">
+      <i class="fas fa-sign-out-alt"></i> <span data-i18n="admin.logout">退出登录</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content flex flex-col">
+  <header class="top-header">
+    <div class="flex items-center gap-4">
+      <h1 class="text-lg font-semibold text-gray-800" data-i18n="admin.users.title">注册用户管理</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">A</div>
+    </div>
+  </header>
+
+  <div class="p-6">
+    <!-- Toolbar -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div class="relative flex-1 sm:w-80">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input type="text" id="search-input" data-i18n-placeholder="admin.users.search.placeholder" placeholder="搜索姓名、邮箱、借书证号..." class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+        </div>
+        <select class="py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 outline-none focus:ring-2 focus:ring-primary/20">
+          <option data-i18n="admin.users.filter.status">全部状态</option>
+          <option>正常活跃</option>
+          <option>已锁定</option>
+          <option>待审核</option>
+        </select>
+      </div>
+      <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 flex-shrink-0" onclick="alert('导出CSV请求已发送')">
+        <i class="fas fa-file-export"></i> <span data-i18n="admin.users.export">导出用户名单</span>
+      </button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left whitespace-nowrap">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider font-semibold">
+              <th class="px-6 py-4" data-i18n="admin.users.col.info">用户信息</th>
+              <th class="px-6 py-4" data-i18n="admin.users.col.card">借书证号</th>
+              <th class="px-6 py-4" data-i18n="admin.users.col.time">注册时间</th>
+              <th class="px-6 py-4 text-center" data-i18n="admin.users.col.quota">借阅额度使用</th>
+              <th class="px-6 py-4" data-i18n="admin.users.col.status">账号状态</th>
+              <th class="px-6 py-4 text-right" data-i18n="admin.books.col.action">操作</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm" id="users-tbody">
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">陈</div>
+                  <div>
+                    <p class="font-bold text-gray-800">陈小明</p>
+                    <p class="text-xs text-gray-400 mt-0.5">chen***@gmail.com</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-gray-600 font-mono">S1234567A</td>
+              <td class="px-6 py-4 text-gray-600 text-xs">2024-05-12 10:30</td>
+              <td class="px-6 py-4">
+                <div class="flex items-center justify-center gap-2">
+                  <div class="w-16 bg-gray-200 rounded-full h-1.5"><div class="bg-primary h-1.5 rounded-full" style="width: 60%"></div></div>
+                  <span class="text-xs font-medium text-gray-600">3/5</span>
+                </div>
+              </td>
+              <td class="px-6 py-4"><span class="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium border border-green-100"><i class="fas fa-check-circle mr-1"></i>正常</span></td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button class="p-1.5 text-gray-400 hover:text-blue-500 transition" title="重置密码" onclick="resetPwd()"><i class="fas fa-key"></i></button>
+                  <button class="p-1.5 text-gray-400 hover:text-red-500 transition" title="封禁账号" onclick="banUser()"><i class="fas fa-ban"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">林</div>
+                  <div>
+                    <p class="font-bold text-gray-800">林丽丽</p>
+                    <p class="text-xs text-gray-400 mt-0.5">lin***@yahoo.com</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-gray-600 font-mono">S7654321B</td>
+              <td class="px-6 py-4 text-gray-600 text-xs">2025-01-20 14:15</td>
+              <td class="px-6 py-4">
+                <div class="flex items-center justify-center gap-2">
+                  <div class="w-16 bg-gray-200 rounded-full h-1.5"><div class="bg-green-500 h-1.5 rounded-full" style="width: 20%"></div></div>
+                  <span class="text-xs font-medium text-gray-600">1/5</span>
+                </div>
+              </td>
+              <td class="px-6 py-4"><span class="bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-xs font-medium border border-green-100"><i class="fas fa-check-circle mr-1"></i>正常</span></td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button class="p-1.5 text-gray-400 hover:text-blue-500 transition" title="重置密码" onclick="resetPwd()"><i class="fas fa-key"></i></button>
+                  <button class="p-1.5 text-gray-400 hover:text-red-500 transition" title="封禁账号" onclick="banUser()"><i class="fas fa-ban"></i></button>
+                </div>
+              </td>
+            </tr>
+
+            <tr class="hover:bg-gray-50 transition bg-red-50/30">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold">J</div>
+                  <div>
+                    <p class="font-bold text-gray-800 text-gray-500">John Doe</p>
+                    <p class="text-xs text-gray-400 mt-0.5">j.doe***@outlook.com</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-gray-400 font-mono">G1122334C</td>
+              <td class="px-6 py-4 text-gray-400 text-xs">2023-11-05 09:22</td>
+              <td class="px-6 py-4">
+                <div class="flex items-center justify-center gap-2">
+                  <div class="w-16 bg-gray-200 rounded-full h-1.5"><div class="bg-red-500 h-1.5 rounded-full" style="width: 100%"></div></div>
+                  <span class="text-xs font-medium text-red-500 font-bold">5/5</span>
+                </div>
+              </td>
+              <td class="px-6 py-4"><span class="bg-red-100 text-red-600 px-2.5 py-1 rounded-full text-xs font-medium border border-red-200"><i class="fas fa-lock mr-1"></i>已锁定 (严重逾期)</span></td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button class="p-1.5 text-green-500 hover:text-green-600 transition font-medium text-xs border border-green-200 bg-green-50 px-3 py-1.5 rounded-lg" onclick="alert('已解除锁定')"><i class="fas fa-unlock-alt mr-1"></i>解锁</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+        <span class="text-sm text-gray-500" id="users-total">共 12,845 条记录，当前显示 1-3 条</span>
+        <div class="flex items-center gap-1">
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-400 flex items-center justify-center cursor-not-allowed"><i class="fas fa-chevron-left text-xs"></i></button>
+          <button class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center text-sm font-medium">1</button>
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center text-sm">2</button>
+          <span class="px-1 text-gray-400">...</span>
+          <button class="w-8 h-8 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center"><i class="fas fa-chevron-right text-xs"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+$(function() {
+  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+});
+</script>
+<script src="admin-users-integration.js"></script>
+</body>
+</html>

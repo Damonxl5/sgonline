@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NLB eReads - 原型预览</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0f172a; margin: 0; padding: 0; }
+  .page-section { margin-bottom: 80px; }
+  .section-label {
+    position: sticky; top: 0; z-index: 100;
+    background: #0f172a;
+    padding: 16px 24px 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: #0f4c81; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .section-title { color: #e2e8f0; font-size: 15px; font-weight: 600; }
+  .section-desc { color: #64748b; font-size: 12px; margin-left: auto; }
+  .iframe-wrapper {
+    margin: 0 24px;
+    border-radius: 16px;
+    border: 1px solid #1e293b;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    background: #fff;
+  }
+  .iframe-wrapper iframe {
+    width: 100%; display: block; border: none; border-radius: 16px;
+  }
+  /* Top nav bar */
+  .top-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: rgba(15,23,42,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #1e293b;
+    padding: 10px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .top-nav-logo { display: flex; align-items: center; gap: 8px; }
+  .top-nav-logo .icon {
+    width: 32px; height: 32px; background: #0f4c81;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  }
+  .top-nav-logo span { color: #e2e8f0; font-weight: 700; font-size: 15px; }
+  .nav-links { display: flex; gap: 4px; overflow-x: auto; flex: 1; }
+  .nav-link {
+    flex-shrink: 0; padding: 6px 14px; border-radius: 8px;
+    color: #94a3b8; font-size: 12px; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap; border: none; background: none;
+  }
+  .nav-link:hover { background: #1e293b; color: #e2e8f0; }
+  .nav-link.active { background: #0f4c81; color: #fff; }
+  .badge {
+    display: inline-block; background: #1e3a5f; color: #60a5fa;
+    font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px;
+  }
+  body { padding-top: 56px; }
+</style>
+</head>
+<body>
+
+<!-- Fixed Top Navigation -->
+<div class="top-nav">
+  <div class="top-nav-logo">
+    <div class="icon"><i class="fas fa-book-open text-white text-sm"></i></div>
+    <span>NLB eReads</span>
+    <span style="color:#475569;font-size:11px;margin-left:4px;">原型预览</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="scrollToSection('s1',this)">
+      <i class="fas fa-sign-in-alt mr-1"></i>登录
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s2',this)">
+      <i class="fas fa-home mr-1"></i>首页
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s3',this)">
+      <i class="fas fa-search mr-1"></i>搜索
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s4',this)">
+      <i class="fas fa-book mr-1"></i>书籍详情
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s5',this)">
+      <i class="fas fa-book-reader mr-1"></i>在线阅读
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s6',this)">
+      <i class="fas fa-bookmark mr-1"></i>我的书架
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s7',this)">
+      <i class="fas fa-user mr-1"></i>个人中心
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s8',this)">
+      <i class="fas fa-headset mr-1"></i>帮助客服
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s9',this)">
+      <i class="fas fa-tablet-alt mr-1"></i>设备管理
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s10',this)">
+      <i class="fas fa-robot mr-1"></i>AI客服
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s11',this)">
+      <i class="fas fa-shield-alt mr-1"></i>管理登录
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s12',this)">
+      <i class="fas fa-chart-line mr-1"></i>管理大盘
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s13',this)">
+      <i class="fas fa-book mr-1"></i>书籍管理
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s14',this)">
+      <i class="fas fa-users mr-1"></i>用户管理
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s15',this)">
+      <i class="fas fa-exchange-alt mr-1"></i>借阅记录
+    </button>
+    <button class="nav-link" onclick="scrollToSection('s16',this)">
+      <i class="fas fa-bullhorn mr-1"></i>系统公告
+    </button>
+  </div>
+  <div style="color:#475569;font-size:11px;flex-shrink:0;">16 个页面</div>
+</div>
+
+<!-- Page 1: Login -->
+<div class="page-section" id="s1">
+  <div class="section-label">
+    <div class="section-num">1</div>
+    <span class="section-title">登录 / 身份核验</span>
+    <span class="section-desc">login.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="login.html" height="700" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 2: Home -->
+<div class="page-section" id="s2">
+  <div class="section-label">
+    <div class="section-num">2</div>
+    <span class="section-title">平台首页</span>
+    <span class="section-desc">home.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="home.html" height="1300" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 3: Search -->
+<div class="page-section" id="s3">
+  <div class="section-label">
+    <div class="section-num">3</div>
+    <span class="section-title">资源检索 / 分类浏览</span>
+    <span class="section-desc">search.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="search.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 4: Book Detail -->
+<div class="page-section" id="s4">
+  <div class="section-label">
+    <div class="section-num">4</div>
+    <span class="section-title">书籍详情</span>
+    <span class="section-desc">book-detail.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="book-detail.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 5: Reading -->
+<div class="page-section" id="s5">
+  <div class="section-label">
+    <div class="section-num">5</div>
+    <span class="section-title">在线阅读</span>
+    <span class="section-desc">reading.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="reading.html" height="800" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 6: Bookshelf -->
+<div class="page-section" id="s6">
+  <div class="section-label">
+    <div class="section-num">6</div>
+    <span class="section-title">我的书架 / 借阅管理</span>
+    <span class="section-desc">bookshelf.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="bookshelf.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 7: Profile -->
+<div class="page-section" id="s7">
+  <div class="section-label">
+    <div class="section-num">7</div>
+    <span class="section-title">个人中心</span>
+    <span class="section-desc">profile.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="profile.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 8: Help -->
+<div class="page-section" id="s8">
+  <div class="section-label">
+    <div class="section-num">8</div>
+    <span class="section-title">帮助与客服</span>
+    <span class="section-desc">help.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="help.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 9: Devices -->
+<div class="page-section" id="s9">
+  <div class="section-label">
+    <div class="section-num">9</div>
+    <span class="section-title">推送 / 设备管理</span>
+    <span class="section-desc">devices.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="devices.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 10: AI Chat -->
+<div class="page-section" id="s10">
+  <div class="section-label">
+    <div class="section-num">10</div>
+    <span class="section-title">AI 智能客服</span>
+    <span class="section-desc">ai-chat.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="ai-chat.html" height="700" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 11: Admin Login -->
+<div class="page-section" id="s11">
+  <div class="section-label">
+    <div class="section-num">11</div>
+    <span class="section-title">后台管理登录</span>
+    <span class="section-desc">admin-login.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="admin-login.html" height="700" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 12: Admin Dashboard -->
+<div class="page-section" id="s12">
+  <div class="section-label">
+    <div class="section-num">12</div>
+    <span class="section-title">管理大盘</span>
+    <span class="section-desc">admin-dashboard.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="admin-dashboard.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 13: Admin Books -->
+<div class="page-section" id="s13">
+  <div class="section-label">
+    <div class="section-num">13</div>
+    <span class="section-title">书籍管理</span>
+    <span class="section-desc">admin-books.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="admin-books.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 14: Admin Users -->
+<div class="page-section" id="s14">
+  <div class="section-label">
+    <div class="section-num">14</div>
+    <span class="section-title">用户管理</span>
+    <span class="section-desc">admin-users.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="admin-users.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 15: Admin Borrows -->
+<div class="page-section" id="s15">
+  <div class="section-label">
+    <div class="section-num">15</div>
+    <span class="section-title">借阅记录</span>
+    <span class="section-desc">admin-borrows.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="admin-borrows.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Page 16: Admin Notices -->
+<div class="page-section" id="s16">
+  <div class="section-label">
+    <div class="section-num">16</div>
+    <span class="section-title">系统公告</span>
+    <span class="section-desc">admin-notices.html</span>
+  </div>
+  <div class="iframe-wrapper">
+    <iframe src="admin-notices.html" height="900" scrolling="auto" onload="autoHeight(this)"></iframe>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center;padding:40px 24px;color:#334155;font-size:12px;border-top:1px solid #1e293b;">
+  NLB eReads 高保真原型 · 16 个核心页面 · 基于 Tailwind CSS + Font Awesome
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+// 自动撑高 iframe，使内容完整显示，不截断
+function autoHeight(iframe) {
+  try {
+    const h = iframe.contentDocument.body.scrollHeight;
+    if (h && h > 400) iframe.style.height = h + 'px';
+  } catch(e) {}
+}
+
+// 页面路由 → section ID 映射
+const PAGE_SECTION = {
+  login: 's1', home: 's2', search: 's3',
+  'book-detail': 's4', reading: 's5', bookshelf: 's6',
+  profile: 's7', help: 's8', devices: 's9', 'ai-chat': 's10',
+  'admin-login': 's11', 'admin-dashboard': 's12', 'admin-books': 's13',
+  'admin-users': 's14', 'admin-borrows': 's15', 'admin-notices': 's16'
+};
+const SECTION_NAV = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15','s16'];
+
+/**
+ * 供 iframe 子页面调用：window.parent.switchPage('home', 'home.html')
+ * 滚动到对应 section 并高亮导航
+ */
+function switchPage(pageKey, url) {
+  const sectionId = PAGE_SECTION[pageKey];
+  if (!sectionId) return;
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  // 更新该 section 内的 iframe src（触发页面刷新）
+  const iframe = section.querySelector('iframe');
+  if (iframe && iframe.src.indexOf(url) === -1) {
+    iframe.src = url;
+  }
+
+  // 滚动到目标 section
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // 高亮顶部导航
+  const idx = SECTION_NAV.indexOf(sectionId);
+  document.querySelectorAll('.nav-link').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+
+  // 短暂高亮边框提示
+  const wrapper = section.querySelector('.iframe-wrapper');
+  if (wrapper) {
+    wrapper.style.boxShadow = '0 0 0 3px #0f4c81, 0 25px 60px rgba(0,0,0,0.5)';
+    setTimeout(() => { wrapper.style.boxShadow = ''; }, 1500);
+  }
+}
+
+function scrollToSection(id, btn) {
+  document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Auto-highlight nav on scroll
+const sections = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15','s16'];
+const navBtns = document.querySelectorAll('.nav-link');
+window.addEventListener('scroll', () => {
+  let current = 's1';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 100) current = id;
+  });
+  navBtns.forEach((btn, i) => {
+    btn.classList.toggle('active', sections[i] === current);
+  });
+});
+</script>
+</body>
+</html>
