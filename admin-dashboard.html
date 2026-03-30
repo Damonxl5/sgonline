@@ -15,20 +15,28 @@ tailwind.config = {
 </script>
 <style>
   body { font-family: 'Inter', sans-serif; }
-  .sidebar { background: #0f172a; width: 240px; transition: all 0.3s; }
+  .sidebar { background: #0f172a; width: 240px; transition: transform 0.3s; flex-shrink: 0; }
   .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
   .sidebar-link:hover { background: #1e293b; color: #fff; }
   .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
-  .main-content { background: #f8fafc; flex: 1; height: 100vh; overflow-y: auto; }
-  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 40; }
+  .main-content { background: #f8fafc; flex: 1; min-height: 100vh; overflow-y: auto; min-width: 0; }
+  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; z-index: 40; }
   .stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; display: flex; flex-direction: column; }
+  @media (max-width: 1023px) {
+    .sidebar { position: fixed; left: 0; top: 0; height: 100%; z-index: 50; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    body { overflow-x: hidden; }
+  }
 </style>
 <script src="nav.js"></script>
 <script src="i18n.js"></script>
 <script src="api-config.js"></script>
 <script src="api-services.js"></script>
 </head>
-<body class="flex min-h-screen overflow-hidden">
+<body class="flex min-h-screen">
+
+<!-- Sidebar Backdrop (mobile) -->
+<div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
 
 <!-- Sidebar -->
 <aside class="sidebar flex-shrink-0 flex flex-col h-screen">
@@ -84,7 +92,7 @@ tailwind.config = {
   <!-- Top Header -->
   <header class="top-header">
     <div class="flex items-center gap-4">
-      <button class="text-gray-400 hover:text-gray-600 lg:hidden">
+      <button id="sidebar-toggle" class="text-gray-400 hover:text-gray-600 lg:hidden">
         <i class="fas fa-bars"></i>
       </button>
       <h1 class="text-lg font-semibold text-gray-800" data-i18n="admin.nav.dashboard">管理大盘</h1>
@@ -106,7 +114,7 @@ tailwind.config = {
   </header>
 
   <!-- Dashboard Content -->
-  <div class="p-6 space-y-6">
+  <div class="p-4 lg:p-6 space-y-4 lg:space-y-6">
 
     <!-- Welcome Banner -->
     <div class="bg-gradient-to-r from-blue-600 to-primary rounded-2xl p-6 text-white shadow-lg flex items-center justify-between">
@@ -120,7 +128,7 @@ tailwind.config = {
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="stat-card">
         <div class="flex items-center justify-between mb-4">
           <p class="text-sm font-medium text-gray-500" data-i18n="admin.dash.stat.books">总书籍数量</p>
@@ -167,12 +175,12 @@ tailwind.config = {
 
       <!-- Recent Borrowings (Takes up 2 columns) -->
       <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 class="font-semibold text-gray-800" data-i18n="admin.dash.recent">最新借阅动态</h3>
           <button class="text-sm text-primary hover:underline font-medium" data-nav="admin-borrows" data-i18n="admin.dash.recent.all">查看全部</button>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
+          <table class="w-full text-left border-collapse min-w-[480px]">
             <thead>
               <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                 <th class="px-6 py-3 font-medium" data-i18n="admin.borrows.col.book">书籍</th>
@@ -275,6 +283,23 @@ tailwind.config = {
 $(function() {
   // 全局 data-nav 跳转
   $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+
+  // Mobile sidebar toggle
+  $('#sidebar-toggle').on('click', function() {
+    $('.sidebar').addClass('open');
+    $('#sidebar-backdrop').removeClass('hidden');
+  });
+  $('#sidebar-backdrop').on('click', function() {
+    $('.sidebar').removeClass('open');
+    $('#sidebar-backdrop').addClass('hidden');
+  });
+  // Close sidebar on nav link click (mobile)
+  $(document).on('click', '.sidebar-link', function() {
+    if (window.innerWidth < 1024) {
+      $('.sidebar').removeClass('open');
+      $('#sidebar-backdrop').addClass('hidden');
+    }
+  });
 });
 </script>
 <script src="admin-dashboard-integration.js"></script>
