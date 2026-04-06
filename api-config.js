@@ -28,10 +28,10 @@ class APIClient {
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers
-    };
+    const isFormData = options.body instanceof FormData;
+    const headers = isFormData
+      ? {}
+      : { 'Content-Type': 'application/json', ...options.headers };
 
     const token = this.getToken();
     if (token) {
@@ -85,14 +85,14 @@ class APIClient {
   post(endpoint, data = {}) {
     return this.request(endpoint, {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: data instanceof FormData ? data : JSON.stringify(data)
     });
   }
 
   put(endpoint, data = {}) {
     return this.request(endpoint, {
       method: 'PUT',
-      body: JSON.stringify(data)
+      body: data instanceof FormData ? data : JSON.stringify(data)
     });
   }
 

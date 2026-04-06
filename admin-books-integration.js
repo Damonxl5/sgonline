@@ -10,6 +10,7 @@ $(function () {
 
   let currentPage = 1;
   let currentFilters = {};
+  let booksCache = {};
 
   // Load books
   async function loadBooks(page = 1) {
@@ -18,6 +19,8 @@ $(function () {
       const res = await adminAPI.getBooks(params);
       const books = res.data?.books || [];
       const total = res.data?.total || res.total || books.length;
+
+      books.forEach(b => { booksCache[b.id] = b; });
 
       const html = books.map((b, i) => {
         const gradient = gradients[i % gradients.length];
@@ -195,6 +198,7 @@ $(function () {
   window.showBookModal = function(id = null) {
     const isEdit = !!id;
     const title = isEdit ? '编辑书籍信息' : '录入新书';
+    const book = isEdit ? (booksCache[id] || {}) : {};
     const $modal = $(`
       <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-2xl shadow-xl">
@@ -206,15 +210,15 @@ $(function () {
             <div class="grid grid-cols-2 gap-4">
               <div class="col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">书籍名称</label>
-                <input type="text" id="book-title" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                <input type="text" id="book-title" value="${book.title || ''}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary">
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">作者</label>
-                <input type="text" id="book-author" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                <input type="text" id="book-author" value="${book.author || ''}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary">
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">ISBN</label>
-                <input type="text" id="book-isbn" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                <input type="text" id="book-isbn" value="${book.isbn || ''}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary">
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">分类</label>
@@ -251,6 +255,11 @@ $(function () {
         </div>
       </div>`);
     $('body').append($modal);
+    // Pre-fill select fields after modal is in DOM
+    if (isEdit) {
+      $('#book-category').val(book.category || '');
+      $('#book-language').val(book.language || '');
+    }
     $modal.find('.btn-close').on('click', function() { $modal.remove(); });
     $modal.find('.btn-save').on('click', async function() {
       const file = $('#book-file')[0]?.files[0];
