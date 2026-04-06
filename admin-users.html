@@ -15,20 +15,28 @@ tailwind.config = {
 </script>
 <style>
   body { font-family: 'Inter', sans-serif; }
-  .sidebar { background: #0f172a; width: 240px; transition: all 0.3s; }
+  .sidebar { background: #0f172a; width: 240px; transition: transform 0.3s; flex-shrink: 0; }
   .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
   .sidebar-link:hover { background: #1e293b; color: #fff; }
   .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
-  .main-content { background: #f8fafc; flex: 1; height: 100vh; overflow-y: auto; }
-  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 40; }
+  .main-content { background: #f8fafc; flex: 1; min-height: 100vh; overflow-y: auto; min-width: 0; }
+  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; z-index: 40; }
   .table-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden; }
+  @media (max-width: 1023px) {
+    .sidebar { position: fixed; left: 0; top: 0; height: 100%; z-index: 50; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    body { overflow-x: hidden; }
+  }
 </style>
 <script src="nav.js"></script>
 <script src="i18n.js"></script>
 <script src="api-config.js"></script>
 <script src="api-services.js"></script>
 </head>
-<body class="flex min-h-screen overflow-hidden">
+<body class="flex min-h-screen">
+
+<!-- Sidebar Backdrop (mobile) -->
+<div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
 
 <!-- Sidebar -->
 <aside class="sidebar flex-shrink-0 flex flex-col h-screen">
@@ -72,7 +80,10 @@ tailwind.config = {
 <!-- Main Content -->
 <main class="main-content flex flex-col">
   <header class="top-header">
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <button id="sidebar-toggle" class="text-gray-400 hover:text-gray-600 lg:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
       <h1 class="text-lg font-semibold text-gray-800" data-i18n="admin.users.title">注册用户管理</h1>
     </div>
     <div class="flex items-center gap-4">
@@ -80,30 +91,30 @@ tailwind.config = {
     </div>
   </header>
 
-  <div class="p-6">
+  <div class="p-4 lg:p-6">
     <!-- Toolbar -->
-    <div class="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
-      <div class="flex items-center gap-3 w-full sm:w-auto">
-        <div class="relative flex-1 sm:w-80">
-          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-          <input type="text" id="search-input" data-i18n-placeholder="admin.users.search.placeholder" placeholder="搜索姓名、邮箱、借书证号..." class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none">
-        </div>
-        <select class="py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 outline-none focus:ring-2 focus:ring-primary/20">
+    <div class="flex flex-col gap-3 mb-4">
+      <div class="relative w-full">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input type="text" id="search-input" data-i18n-placeholder="admin.users.search.placeholder" placeholder="搜索姓名、邮箱、借书证号..." class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+      </div>
+      <div class="flex items-center gap-2">
+        <select class="flex-1 py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 outline-none focus:ring-2 focus:ring-primary/20">
           <option data-i18n="admin.users.filter.status">全部状态</option>
           <option>正常活跃</option>
           <option>已锁定</option>
           <option>待审核</option>
         </select>
+        <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-sm font-medium transition flex items-center gap-1.5 flex-shrink-0" onclick="alert('导出CSV请求已发送')">
+          <i class="fas fa-file-export"></i> <span class="hidden sm:inline" data-i18n="admin.users.export">导出用户名单</span><span class="sm:hidden">导出</span>
+        </button>
       </div>
-      <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 flex-shrink-0" onclick="alert('导出CSV请求已发送')">
-        <i class="fas fa-file-export"></i> <span data-i18n="admin.users.export">导出用户名单</span>
-      </button>
     </div>
 
     <!-- Data Table -->
     <div class="table-container">
       <div class="overflow-x-auto">
-        <table class="w-full text-left whitespace-nowrap">
+        <table class="w-full text-left whitespace-nowrap min-w-[650px]">
           <thead>
             <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider font-semibold">
               <th class="px-6 py-4" data-i18n="admin.users.col.info">用户信息</th>
@@ -199,7 +210,7 @@ tailwind.config = {
       </div>
 
       <!-- Pagination -->
-      <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+      <div class="px-4 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <span class="text-sm text-gray-500" id="users-total">共 12,845 条记录，当前显示 1-3 条</span>
         <div class="flex items-center gap-1">
           <button class="w-8 h-8 rounded border border-gray-200 text-gray-400 flex items-center justify-center cursor-not-allowed"><i class="fas fa-chevron-left text-xs"></i></button>
@@ -216,6 +227,22 @@ tailwind.config = {
 <script>
 $(function() {
   $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+
+  // Mobile sidebar toggle
+  $('#sidebar-toggle').on('click', function() {
+    $('.sidebar').addClass('open');
+    $('#sidebar-backdrop').removeClass('hidden');
+  });
+  $('#sidebar-backdrop').on('click', function() {
+    $('.sidebar').removeClass('open');
+    $('#sidebar-backdrop').addClass('hidden');
+  });
+  $(document).on('click', '.sidebar-link', function() {
+    if (window.innerWidth < 1024) {
+      $('.sidebar').removeClass('open');
+      $('#sidebar-backdrop').addClass('hidden');
+    }
+  });
 });
 </script>
 <script src="admin-users-integration.js"></script>

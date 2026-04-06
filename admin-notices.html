@@ -15,20 +15,28 @@ tailwind.config = {
 </script>
 <style>
   body { font-family: 'Inter', sans-serif; }
-  .sidebar { background: #0f172a; width: 240px; transition: all 0.3s; }
+  .sidebar { background: #0f172a; width: 240px; transition: transform 0.3s; flex-shrink: 0; }
   .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
   .sidebar-link:hover { background: #1e293b; color: #fff; }
   .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
-  .main-content { background: #f8fafc; flex: 1; height: 100vh; overflow-y: auto; }
-  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 40; }
+  .main-content { background: #f8fafc; flex: 1; min-height: 100vh; overflow-y: auto; min-width: 0; }
+  .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; z-index: 40; }
   .table-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden; }
+  @media (max-width: 1023px) {
+    .sidebar { position: fixed; left: 0; top: 0; height: 100%; z-index: 50; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    body { overflow-x: hidden; }
+  }
 </style>
 <script src="nav.js"></script>
 <script src="i18n.js"></script>
 <script src="api-config.js"></script>
 <script src="api-services.js"></script>
 </head>
-<body class="flex min-h-screen overflow-hidden">
+<body class="flex min-h-screen">
+
+<!-- Sidebar Backdrop (mobile) -->
+<div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
 
 <!-- Sidebar -->
 <aside class="sidebar flex-shrink-0 flex flex-col h-screen">
@@ -72,7 +80,10 @@ tailwind.config = {
 <!-- Main Content -->
 <main class="main-content flex flex-col">
   <header class="top-header">
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <button id="sidebar-toggle" class="text-gray-400 hover:text-gray-600 lg:hidden">
+        <i class="fas fa-bars"></i>
+      </button>
       <h1 class="text-lg font-semibold text-gray-800" data-i18n="admin.notices.title">全站公告与通知</h1>
     </div>
     <div class="flex items-center gap-4">
@@ -80,22 +91,22 @@ tailwind.config = {
     </div>
   </header>
 
-  <div class="p-6">
+  <div class="p-4 lg:p-6">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
       <!-- Left Column: Manage Notices -->
-      <div class="lg:col-span-2">
+      <div class="lg:col-span-2 order-2 lg:order-1">
         <div class="flex justify-between items-center mb-4">
           <h2 class="font-semibold text-gray-800" data-i18n="admin.notices.list">已有公告记录</h2>
           <div class="flex gap-2">
-            <button class="px-3 py-1.5 border border-gray-200 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-50"><i class="fas fa-filter mr-1"></i><span data-i18n="admin.notices.filter.status">状态</span></button>
-            <button class="px-3 py-1.5 border border-gray-200 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-50"><i class="fas fa-calendar mr-1"></i><span data-i18n="admin.notices.filter.date">日期</span></button>
+            <button class="px-3 py-1.5 border border-gray-200 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-50"><i class="fas fa-filter mr-1"></i><span class="hidden sm:inline" data-i18n="admin.notices.filter.status">状态</span></button>
+            <button class="px-3 py-1.5 border border-gray-200 bg-white rounded-lg text-sm text-gray-600 hover:bg-gray-50"><i class="fas fa-calendar mr-1"></i><span class="hidden sm:inline" data-i18n="admin.notices.filter.date">日期</span></button>
           </div>
         </div>
 
         <div class="table-container">
           <div class="overflow-x-auto">
-            <table class="w-full text-left whitespace-nowrap">
+            <table class="w-full text-left whitespace-nowrap min-w-[600px]">
               <thead>
                 <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider font-semibold">
                   <th class="px-6 py-4" data-i18n="admin.notices.col.time">发布时间</th>
@@ -166,8 +177,8 @@ tailwind.config = {
       </div>
 
       <!-- Right Column: Create Form -->
-      <div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
+      <div class="order-1 lg:order-2">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6 lg:sticky lg:top-24">
           <h2 class="font-bold text-gray-800 text-lg mb-5 flex items-center gap-2">
             <i class="fas fa-paper-plane text-primary"></i> <span data-i18n="admin.notices.create">发送新通知</span>
           </h2>
@@ -227,6 +238,22 @@ tailwind.config = {
 <script>
 $(function() {
   $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
+
+  // Mobile sidebar toggle
+  $('#sidebar-toggle').on('click', function() {
+    $('.sidebar').addClass('open');
+    $('#sidebar-backdrop').removeClass('hidden');
+  });
+  $('#sidebar-backdrop').on('click', function() {
+    $('.sidebar').removeClass('open');
+    $('#sidebar-backdrop').addClass('hidden');
+  });
+  $(document).on('click', '.sidebar-link', function() {
+    if (window.innerWidth < 1024) {
+      $('.sidebar').removeClass('open');
+      $('#sidebar-backdrop').addClass('hidden');
+    }
+  });
 });
 </script>
 <script src="admin-notices-integration.js"></script>
