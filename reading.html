@@ -28,8 +28,14 @@ tailwind.config = {
 </style>
 <script src="i18n.js"></script>
 <script src="nav.js"></script>
+<script src="api-config.js"></script>
+<script src="api-services.js"></script>
+<style>
+  #reader-iframe { width:100%; height:100%; border:none; }
+  #reader-loading, #reader-error { position:absolute; inset:0; flex-direction:column; align-items:center; justify-content:center; }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-100 h-screen overflow-hidden flex flex-col">
 
 <!-- Top Toolbar -->
 <div class="bg-white toolbar-shadow sticky top-0 z-50 px-4 py-2.5 flex items-center gap-3">
@@ -59,7 +65,7 @@ tailwind.config = {
   <div class="progress-bar h-full" style="width:65%"></div>
 </div>
 
-<div class="flex flex-1 relative">
+<div class="flex flex-1 relative min-h-0">
 
   <!-- TOC Sidebar (hidden by default) -->
   <div id="toc-panel" class="hidden fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-50 overflow-y-auto">
@@ -148,14 +154,37 @@ tailwind.config = {
           </button>
         </div>
       </div>
+      <!-- Download -->
+      <div>
+        <p class="text-xs font-medium text-gray-500 mb-2">下载书籍</p>
+        <div class="flex gap-2">
+          <button id="btn-dl-epub" class="flex-1 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition">EPUB</button>
+          <button id="btn-dl-pdf" class="flex-1 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition">PDF</button>
+          <button id="btn-dl-mobi" class="flex-1 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition">MOBI</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Main Reading Area -->
-  <main id="reading-area" class="flex-1 theme-white">
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 py-8" id="reading-content-area">
-      <!-- JS 动态填充 -->
+  <main id="reading-area" class="flex-1 theme-white overflow-hidden relative">
+    <!-- Loading State -->
+    <div id="reader-loading" class="bg-white pt-40">
+      <div class="text-center">
+        <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-gray-500 text-sm">正在加载书籍...</p>
+      </div>
     </div>
+    <!-- Error State -->
+    <div id="reader-error" class="bg-white hidden pt-40">
+      <div class="text-center px-6">
+        <i class="fas fa-exclamation-circle text-4xl text-red-400 mb-4"></i>
+        <p class="text-gray-700 font-medium mb-2" id="reader-error-msg">加载失败</p>
+        <button id="reader-retry" class="mt-3 px-4 py-2 bg-primary text-white rounded-lg text-sm">重试</button>
+      </div>
+    </div>
+    <!-- Reader Iframe -->
+    <iframe id="reader-iframe" class="hidden" allowfullscreen></iframe>
   </main>
 </div>
 
@@ -211,331 +240,9 @@ function toggleSettings() {
 }
 function setTheme(theme) {
   const area = document.getElementById('reading-area');
-  area.className = 'flex-1 theme-' + theme;
+  area.className = 'flex-1 theme-' + theme + ' overflow-hidden relative';
 }
 </script>
+<script src="reading-integration.js"></script>
 </body>
 </html>
-<script>
-$(function(){
-  // 全局 data-nav 跳转
-  $(document).on('click','[data-nav]',function(e){ e.preventDefault(); navigateTo($(this).data('nav')); });
-
-  // ── 书籍数据 ──
-  const BOOKS = [
-    {
-      id: 0, title: '新加坡史', author: '柯木林', pages: 456,
-      chapter: '第三章：英国殖民统治', progress: 65, curPage: 134,
-      toc: [
-        { title: '第一章：史前新加坡', active: false },
-        { title: '第二章：淡马锡时代', active: false },
-        { title: '第三章：英国殖民统治', active: true },
-        { title: '第四章：日据时期', active: false },
-        { title: '第五章：独立建国', active: false },
-      ],
-      content: `
-        <h2 class="reading-content text-xl font-bold text-gray-900 mb-6 text-center">第三章：英国殖民统治</h2>
-        <p class="reading-content text-base text-gray-800 mb-5">1819年，英国东印度公司代表斯坦福·莱佛士爵士登陆新加坡，与柔佛苏丹签订条约，正式将新加坡纳入英国的殖民版图。这一历史性时刻，不仅改变了这座小岛的命运，更深刻影响了整个东南亚地区的政治格局。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">莱佛士以其卓越的战略眼光，将新加坡定位为自由贸易港。他废除了原有的贸易税收，吸引了来自中国、印度、马来群岛乃至欧洲的商人纷至沓来。短短数年间，这座原本人口稀少的小渔村，迅速发展成为繁荣的国际贸易中心。</p>
-        <div class="my-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
-          <p class="reading-content text-sm text-amber-800 italic">"新加坡的地理位置得天独厚，扼守马六甲海峡咽喉，是连接东西方贸易的天然枢纽。"</p>
-          <p class="text-xs text-amber-600 mt-2">—— 斯坦福·莱佛士，1819年</p>
-        </div>
-        <p class="reading-content text-base text-gray-800 mb-5">随着贸易的繁荣，新加坡的人口构成也发生了深刻变化。大批华人劳工从中国南方各省涌入，他们带来了各自的方言、习俗与文化，在这片土地上扎根生息。与此同时，印度裔移民、马来人以及欧洲商人也在此聚居，形成了独特的多元文化社会。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">殖民政府在城市规划上颇具远见。莱佛士制定了详细的城市分区规划，将不同族群的居住区域加以划分，既保留了各族群的文化特色，又维持了社会秩序。这一规划的痕迹，至今仍可在牛车水、小印度、甘榜格南等历史街区中清晰可见。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">1942年2月15日，<span class="highlight-yellow">日本军队攻陷新加坡</span>，英国殖民统治宣告中断。这一被丘吉尔称为"英国历史上最惨烈的灾难"的事件，深刻动摇了殖民者不可战胜的神话，为日后的独立运动埋下了伏笔。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">战后，英国虽然重新恢复了对新加坡的统治，但殖民地的政治生态已发生根本性转变。<span class="highlight-blue">人民行动党的崛起</span>，标志着新加坡本土政治力量的成熟。在李光耀等领导人的带领下，新加坡走上了争取自治、最终独立的道路。</p>
-      `
-    },
-    {
-      id: 1, title: '从第三世界到第一世界', author: '李光耀', pages: 752,
-      chapter: '第二部：经济腾飞的秘诀', progress: 24, curPage: 180,
-      toc: [
-        { title: '第一部：艰难的建国之路', active: false },
-        { title: '第二部：经济腾飞的秘诀', active: true },
-        { title: '第三部：外交纵横', active: false },
-        { title: '第四部：社会建设', active: false },
-        { title: '第五部：展望未来', active: false },
-      ],
-      content: `
-        <h2 class="reading-content text-xl font-bold text-gray-900 mb-6 text-center">第二部：经济腾飞的秘诀</h2>
-        <p class="reading-content text-base text-gray-800 mb-5">1965年8月9日，新加坡脱离马来西亚联邦，成为独立的主权国家。这一刻，没有欢呼，只有忧虑——一个没有腹地、缺乏资源的弹丸小国，能否在强邻环伺中生存下去？</p>
-        <p class="reading-content text-base text-gray-800 mb-5">我们的第一要务，是让新加坡人吃饱饭、有工作。没有经济基础，一切政治理想都是空谈。我们引进跨国公司，建立出口导向型工业，将新加坡的地理优势转化为经济优势。</p>
-        <div class="my-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
-          <p class="reading-content text-sm text-amber-800 italic">"我们决心把新加坡建设成一个高效、廉洁、务实的国家。我们没有资本浪费在腐败和低效上。"</p>
-          <p class="text-xs text-amber-600 mt-2">—— 李光耀</p>
-        </div>
-        <p class="reading-content text-base text-gray-800 mb-5">廉洁的政府是新加坡经济腾飞的基石。我们提高公务员薪酬，以市场价格吸引最优秀的人才进入政府，同时建立严格的反腐机制。这一做法在当时颇受争议，但事实证明它是正确的。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">教育是另一个关键。我们大力投资教育，推行双语政策，确保每一个新加坡人既能掌握英语参与国际经济，又能保留自己的母语文化。人才是我们唯一的资源，必须充分开发。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">到1990年我卸任时，<span class="highlight-yellow">新加坡的人均GDP已从独立时的500美元增长至超过12,000美元</span>，跻身发达国家行列。这不是奇迹，而是几十万新加坡人用勤劳和智慧创造的成果。</p>
-      `
-    },
-    {
-      id: 2, title: '活着', author: '余华', pages: 228,
-      chapter: '第三章：回乡后的岁月', progress: 38, curPage: 88,
-      toc: [
-        { title: '第一章：富贵的少年时代', active: false },
-        { title: '第二章：参军与战争', active: false },
-        { title: '第三章：回乡后的岁月', active: true },
-        { title: '第四章：饥荒年代', active: false },
-        { title: '第五章：文革与晚年', active: false },
-      ],
-      content: `
-        <h2 class="reading-content text-xl font-bold text-gray-900 mb-6 text-center">第三章：回乡后的岁月</h2>
-        <p class="reading-content text-base text-gray-800 mb-5">我比现在年轻十岁的时候，获得了一个游手好闲的职业，去乡间收集民间歌谣。那一年的整个夏天，我如同一只乱飞的麻雀，在金黄色的田野上来回奔走。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">福贵从战场回来的那天，村口的老槐树还在。他站在树下，看着那条熟悉的泥土小路，心里又是高兴又是难过。高兴的是终于回家了，难过的是不知道家里还剩下什么。</p>
-        <div class="my-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
-          <p class="reading-content text-sm text-amber-800 italic">"人是为活着本身而活着，而不是为了活着之外的任何事物所活着。"</p>
-          <p class="text-xs text-amber-600 mt-2">—— 余华《活着》</p>
-        </div>
-        <p class="reading-content text-base text-gray-800 mb-5">家珍还在，这是福贵没有想到的。他以为她早就改嫁了，毕竟他离开那么多年，音讯全无。可家珍就守着那间破屋子，守着女儿凤霞，等着他回来。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">凤霞已经长成了大姑娘，却因为一场高烧变成了哑巴。<span class="highlight-yellow">福贵看着女儿，心里像是被什么东西堵住了</span>，说不出话来。这是他欠她的，是他年少时荒唐无度结下的债。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">日子就这么过着，<span class="highlight-blue">穷，但是踏实</span>。福贵学会了种地，学会了节俭，学会了珍惜每一粒粮食。他不再是那个败家的阔少爷，他是个庄稼汉，是家珍的丈夫，是凤霞和有庆的父亲。</p>
-      `
-    },
-    {
-      id: 3, title: 'Crazy Rich Asians', author: 'Kevin Kwan', pages: 544,
-      chapter: 'Part 2: The Wedding', progress: 33, curPage: 180,
-      toc: [
-        { title: 'Part 1: The Bachelorette', active: false },
-        { title: 'Part 2: The Wedding', active: true },
-        { title: 'Part 3: The Aftermath', active: false },
-        { title: 'Epilogue', active: false },
-      ],
-      content: `
-        <h2 class="reading-content text-xl font-bold text-gray-900 mb-6 text-center">Part 2: The Wedding</h2>
-        <p class="reading-content text-base text-gray-800 mb-5">The moment Rachel Chu stepped off the Singapore Airlines flight at Changi Airport, she knew that Nick's family was not quite what she had imagined. The private car that awaited them wasn't just a car — it was a statement.</p>
-        <p class="reading-content text-base text-gray-800 mb-5">Singapore hit her like a wall of warm, humid air scented with frangipani and something indefinably tropical. The city gleamed in the afternoon sun, its skyline a forest of glass and steel rising from lush greenery.</p>
-        <div class="my-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
-          <p class="reading-content text-sm text-amber-800 italic">"In Singapore, old money doesn't just talk — it whispers in a language only certain people are born knowing."</p>
-          <p class="text-xs text-amber-600 mt-2">— Kevin Kwan, Crazy Rich Asians</p>
-        </div>
-        <p class="reading-content text-base text-gray-800 mb-5">Eleanor Young surveyed the girl her son had brought home with the practiced eye of a woman who had spent decades navigating Singapore's most treacherous social waters. Rachel Chu was pretty enough, she supposed, in that wholesome American way.</p>
-        <p class="reading-content text-base text-gray-800 mb-5"><span class="highlight-yellow">The wedding of Colin Khoo and Araminta Lee</span> was the social event of the decade. Every family of consequence in Singapore, Malaysia, and Hong Kong had received an invitation — or desperately wished they had.</p>
-        <p class="reading-content text-base text-gray-800 mb-5">Rachel had never felt so thoroughly <span class="highlight-blue">assessed, categorized, and filed away</span> in her entire life. Back in New York, she was simply a well-regarded economics professor. Here, she was an unknown quantity in a world where bloodlines were tracked like stock portfolios.</p>
-      `
-    },
-    {
-      id: 4, title: '三体', author: '刘慈欣', pages: 302,
-      chapter: '第二部：三体（游戏）', progress: 26, curPage: 80,
-      toc: [
-        { title: '第一部：科学边界', active: false },
-        { title: '第二部：三体（游戏）', active: true },
-        { title: '第三部：黑暗中的秘密', active: false },
-        { title: '第四部：宇宙的逻辑', active: false },
-      ],
-      content: `
-        <h2 class="reading-content text-xl font-bold text-gray-900 mb-6 text-center">第二部：三体（游戏）</h2>
-        <p class="reading-content text-base text-gray-800 mb-5">2007年的秋天，军事科学院的汪淼研究员接到了一个奇怪的电话。对方自称是警察，要求他配合调查一起连环科学家自杀案。"您知道射手假说吗？"电话那头的声音低沉地问道。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">汪淼第一次进入三体游戏是一个深夜。他戴上VR头盔的瞬间，那个奇异的世界扑面而来——荒芜的平原，三个太阳在天空中做着无规律的运动，文明在乱纪元与恒纪元之间周而复始地毁灭与重建。</p>
-        <div class="my-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
-          <p class="reading-content text-sm text-amber-800 italic">"给岁月以文明，而不是给文明以岁月。"</p>
-          <p class="text-xs text-amber-600 mt-2">—— 刘慈欣《三体》</p>
-        </div>
-        <p class="reading-content text-base text-gray-800 mb-5">在游戏里，汪淼遇到了历史上众多伟大的思想家和科学家，他们都在试图解开三体世界运行规律的谜题。<span class="highlight-yellow">哥白尼、牛顿、冯·诺伊曼</span>……这些人类历史上最聪明的头脑，在这个残酷的世界面前同样束手无策。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">三个太阳的引力相互叠加，产生了无法预测的混沌运动。这不是计算能力不足的问题，而是<span class="highlight-blue">三体问题本身没有解析解</span>——这是数学和物理学共同宣判的死刑。</p>
-        <p class="reading-content text-base text-gray-800 mb-5">汪淼退出游戏时，窗外已经天亮。他坐在椅子上，脑子里反复回响着一句话："不要回答！不要回答！不要回答！"那是从宇宙深处传来的警告，来自一个已经被黑暗吞噬的文明。</p>
-      `
-    },
-    {
-      id: 5, title: 'Atomic Habits', author: 'James Clear', pages: 319,
-      chapter: 'The 2nd Law: Make It Attractive', progress: 31, curPage: 100,
-      toc: [
-        { title: 'The Fundamentals', active: false },
-        { title: 'The 1st Law: Make It Obvious', active: false },
-        { title: 'The 2nd Law: Make It Attractive', active: true },
-        { title: 'The 3rd Law: Make It Easy', active: false },
-        { title: 'The 4th Law: Make It Satisfying', active: false },
-      ],
-      content: `
-        <h2 class="reading-content text-xl font-bold text-gray-900 mb-6 text-center">The 2nd Law: Make It Attractive</h2>
-        <p class="reading-content text-base text-gray-800 mb-5">The aggregation of marginal gains. That's what the British cycling team coach Dave Brailsford called his philosophy. The idea was to break down everything you could think of that goes into riding a bike, and then improve each thing by just 1 percent.</p>
-        <p class="reading-content text-base text-gray-800 mb-5">Habits are attractive when we associate them with positive feelings, and we can use this insight to our advantage rather than our detriment. We can make hard habits more attractive if we can learn to associate them with a positive experience.</p>
-        <div class="my-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
-          <p class="reading-content text-sm text-amber-800 italic">"You don't rise to the level of your goals. You fall to the level of your systems."</p>
-          <p class="text-xs text-amber-600 mt-2">— James Clear, Atomic Habits</p>
-        </div>
-        <p class="reading-content text-base text-gray-800 mb-5">Temptation bundling works by linking an action you want to do with an action you need to do. <span class="highlight-yellow">Only listen to your favorite podcast while exercising.</span> Only watch your favorite show while ironing or doing household chores.</p>
-        <p class="reading-content text-base text-gray-800 mb-5">The culture we live in determines which behaviors are attractive to us. We tend to adopt habits that are praised and approved of by our culture because we have a strong desire to fit in and belong to the tribe. <span class="highlight-blue">We imitate the habits of three groups in particular: the close, the many, and the powerful.</span></p>
-        <p class="reading-content text-base text-gray-800 mb-5">Every behavior has a surface level craving and a deeper underlying motive. Your habits are modern-day solutions to ancient desires. The underlying motives behind human behavior remain the same. The specific habits we perform differ based on the period of history we live in.</p>
-      `
-    },
-  ];
-
-  // 读取当前书籍（从 sessionStorage，默认 0）
-  let bookId = parseInt(sessionStorage.getItem('nlb_reading_book') || '0', 10);
-  if (bookId < 0 || bookId >= BOOKS.length) bookId = 0;
-  const book = BOOKS[bookId];
-
-  // 渲染页面
-  $('#reading-title').text(book.title);
-  $('#reading-chapter').text(book.chapter);
-  $('#reading-content-area').html(book.content);
-  $('#reading-page-cur').text('第 ' + book.curPage + ' 页');
-  $('#reading-pct').text(book.progress + '%');
-  $('#reading-page-total').text('共 ' + book.pages + ' 页');
-  $('.progress-bar').css('width', book.progress + '%');
-
-  // 渲染目录
-  $('#toc-list').html(book.toc.map(ch => `
-    <div class="px-3 py-2 text-sm ${ch.active ? 'font-medium text-primary bg-blue-50' : 'text-gray-600 hover:bg-gray-50'} rounded-lg cursor-pointer">${ch.title}</div>
-  `).join(''));
-
-  // 字体大小调节（重新绑定，依赖 book.pages）
-  let fontSize = 18;
-  let totalPages = book.pages;
-  $(document).on('click', '.fa-minus', function(){
-    fontSize = Math.max(12, fontSize - 2);
-    $('.reading-content').css('font-size', fontSize + 'px');
-    $(document).find('span').filter(function(){ return $(this).text().trim().match(/^\d+$/) && $(this).closest('.w-8').length; }).text(fontSize);
-  });
-  $(document).on('click', '.fa-plus', function(){
-    fontSize = Math.min(28, fontSize + 2);
-    $('.reading-content').css('font-size', fontSize + 'px');
-    $(document).find('span').filter(function(){ return $(this).text().trim().match(/^\d+$/) && $(this).closest('.w-8').length; }).text(fontSize);
-  });
-
-  // 进度条点击（用当前书页数）
-  $(document).on('click', '.w-full.bg-gray-100.rounded-full.h-1\\.5.cursor-pointer', function(e){
-    const pct = Math.round((e.offsetX / $(this).width()) * 100);
-    $(this).find('.progress-bar').css('width', pct + '%');
-    $('#reading-pct').text(pct + '%');
-    $('#reading-page-cur').text('第 ' + Math.round(pct / 100 * totalPages) + ' 页');
-    $('.progress-bar').first().css('width', pct + '%');
-  });
-
-  // 退出阅读 → 书籍详情（带确认）
-  $('nav button[data-nav="book-detail"]').on('click', function(e){
-    e.preventDefault();
-    e.stopPropagation();
-    showExitConfirm();
-  });
-
-  // 目录面板开关
-  $('button[title="目录"]').on('click', function(){
-    $('#toc-panel').toggleClass('hidden');
-    $('#settings-panel').addClass('hidden');
-  });
-
-  // 设置面板开关
-  $('button[title="设置"]').on('click', function(){
-    $('#settings-panel').toggleClass('hidden');
-    $('#toc-panel').addClass('hidden');
-  });
-
-  // 点击页面其他区域关闭面板
-  $(document).on('click', function(e){
-    if (!$(e.target).closest('#toc-panel, #settings-panel, button[title="目录"], button[title="设置"]').length) {
-      $('#toc-panel').addClass('hidden');
-      $('#settings-panel').addClass('hidden');
-    }
-  });
-
-  // 目录条目点击 → 更新章节标题
-  $(document).on('click', '#toc-panel .cursor-pointer', function(){
-    const chapter = $(this).text().trim();
-    $('nav .text-xs.text-gray-400').text(chapter);
-    $('#toc-panel').addClass('hidden');
-    showToast('已跳转至：' + chapter);
-  });
-
-  // 书签按钮 toggle
-  $('button[title="书签"], button[title="添加书签"]').on('click', function(){
-    const $icon = $(this).find('i');
-    const isActive = $icon.hasClass('text-primary');
-    $icon.toggleClass('text-gray-500 text-primary');
-    showToast(isActive ? '已取消书签' : '书签已添加');
-  });
-
-  // 笔记按钮 → 弹出笔记框
-  $('button[title="笔记"]').on('click', function(){
-    showNoteModal();
-  });
-
-  // 续借按钮
-  $(document).on('click', 'button:contains("续借")', function(){
-    const $btn = $(this);
-    $btn.html('<i class="fas fa-spinner fa-spin mr-1"></i>').prop('disabled', true);
-    setTimeout(function(){
-      $btn.html('续借成功').css({'background':'#16a34a','color':'#fff'}).prop('disabled', false);
-      $('span:contains("5天")').text('26天').css('color','#16a34a');
-      setTimeout(function(){ $btn.html('续借').css({'background':'','color':''}); }, 3000);
-    }, 1000);
-  });
-
-  // 主题切换
-  $(document).on('click', 'button:contains("白天")', function(){ setTheme('white'); updateThemeBtns(this); });
-  $(document).on('click', 'button:contains("护眼")', function(){ setTheme('sepia'); updateThemeBtns(this); });
-  $(document).on('click', 'button:contains("夜间")', function(){ setTheme('night'); updateThemeBtns(this); });
-  function updateThemeBtns(active){
-    $(active).siblings('button').css({'border':'2px solid transparent'});
-    $(active).css({'border':'2px solid #0f4c81'});
-  }
-
-  // 上一页 / 下一页
-  $(document).on('click', '.fa-chevron-left', function(){
-    showToast('已翻至上一页');
-  });
-  $(document).on('click', '.fa-chevron-right', function(){
-    showToast('已翻至下一页');
-  });
-
-  // 语音朗读 toggle
-  $(document).on('change', 'input[type="checkbox"]', function(){
-    const label = $(this).closest('.flex').find('span.text-xs').text();
-    showToast($(this).is(':checked') ? label + ' 已开启' : label + ' 已关闭');
-  });
-
-  // 退出确认弹窗
-  function showExitConfirm(){
-    const pct = book.progress;
-    const $modal = $(`
-      <div id="exit-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl text-center">
-          <i class="fas fa-book-open text-primary text-3xl mb-3"></i>
-          <h3 class="font-semibold text-gray-800 mb-1">退出阅读</h3>
-          <p class="text-sm text-gray-500 mb-5">阅读进度已自动保存（${pct}%）</p>
-          <div class="flex gap-3">
-            <button id="exit-cancel" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">继续阅读</button>
-            <button id="exit-confirm" class="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark">退出</button>
-          </div>
-        </div>
-      </div>`);
-    $('body').append($modal);
-    $('#exit-cancel').on('click', function(){ $modal.remove(); });
-    $('#exit-confirm').on('click', function(){ $modal.remove(); navigateTo('book-detail'); });
-  }
-
-  // 笔记弹窗
-  function showNoteModal(){
-    const selected = window.getSelection ? window.getSelection().toString() : '';
-    const $modal = $(`
-      <div id="note-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-          <h3 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <i class="fas fa-pen text-primary text-sm"></i>添加笔记
-          </h3>
-          ${selected ? `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r-xl mb-3 text-sm text-gray-700 italic">"${selected}"</div>` : ''}
-          <textarea id="note-text" class="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20" rows="4" placeholder="写下你的想法..."></textarea>
-          <div class="flex gap-3 mt-4">
-            <button id="note-cancel" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">取消</button>
-            <button id="note-save" class="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium">保存笔记</button>
-          </div>
-        </div>
-      </div>`);
-    $('body').append($modal);
-    $('#note-cancel').on('click', function(){ $modal.remove(); });
-    $('#note-save').on('click', function(){
-      $modal.remove();
-      showToast('笔记已保存');
-    });
-  }
-
-  // Toast 提示
-  function showToast(msg){
-    const $t = $('<div class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-4 py-2 rounded-xl shadow-lg z-50 whitespace-nowrap">' + msg + '</div>');
-    $('body').append($t);
-    setTimeout(function(){ $t.fadeOut(300, function(){ $(this).remove(); }); }, 1800);
-  }
-});
-</script>

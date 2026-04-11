@@ -1,15 +1,45 @@
 // Book Detail Page API Integration
 let currentBookId = null;
 
+const COVER_COLORS = [
+  'linear-gradient(135deg,#0f4c81,#1a6bb5)',
+  'linear-gradient(135deg,#92400e,#d97706)',
+  'linear-gradient(135deg,#dc2626,#f97316)',
+  'linear-gradient(135deg,#0891b2,#06b6d4)',
+  'linear-gradient(135deg,#7c3aed,#a855f7)',
+  'linear-gradient(135deg,#7c2d12,#ea580c)',
+  'linear-gradient(135deg,#059669,#10b981)',
+  'linear-gradient(135deg,#1e3a5f,#3b82f6)',
+];
+
 $(function () {
-  // Get book ID from URL or sessionStorage
+  // Get book ID: URL param takes priority, then sessionStorage
   const urlParams = new URLSearchParams(window.location.search);
-  currentBookId = urlParams.get('id') || sessionStorage.getItem('current_book_id') || 1;
+  currentBookId = urlParams.get('id') || sessionStorage.getItem('current_book_id');
+
+  if (!currentBookId) {
+    $('#book-title').text('未找到书籍');
+    console.error('book-detail: no book ID provided');
+    return;
+  }
 
   // Load book detail
   loadBookDetail(currentBookId);
   loadSimilarBooks(currentBookId);
   loadUserDevices();
+  loadUserProfile();
+
+  // Recently viewed books for the switcher bar
+  const recentBooks = new Map();
+
+  // Reviews tab: lazy load on first click
+  let reviewsLoaded = false;
+  $(document).on('click', 'button[onclick*="reviews"]', function () {
+    if (!reviewsLoaded) {
+      loadReviews(currentBookId);
+      reviewsLoaded = true;
+    }
+  });
 
   // Load book detail
   async function loadBookDetail(id) {
@@ -17,6 +47,7 @@ $(function () {
       const res = await booksAPI.getBookDetail(id);
       const book = res.data;
       renderBookDetail(book);
+      addToSwitcher(book);
     } catch (error) {
       console.error('Load book detail error:', error);
       alert('加载书籍详情失败');
@@ -25,7 +56,9 @@ $(function () {
 
   // Render book detail
   function renderBookDetail(book) {
-    // Cover
+    // Cover gradient (deterministic by id)
+    const coverColor = COVER_COLORS[(book.id || 0) % COVER_COLORS.length];
+    $('#book-cover').css('background', coverColor);
     $('#book-cover-title').text(book.title);
     $('#book-cover-author').text(book.author);
 
@@ -73,8 +106,103 @@ $(function () {
     // Preview text
     $('#book-preview-text').text(book.preview || '暂无试读内容');
 
+    // TOC
+    if (book.toc) {
+      let tocData = book.toc;
+      if (typeof tocData === 'string') {
+        try { tocData = JSON.parse(tocData); } catch(e) { tocData = null; }
+      }
+      if (Array.isArray(tocData) && tocData.length) {
+        const tocHtml = tocData.map(item => `
+          <div class="flex items-center justify-between py-2 border-b border-gray-50 hover:bg-gray-50 rounded-lg px-2 cursor-pointer">
+            <span class="text-sm text-gray-700">${item.title || item[0] || ''}</span>
+            <span class="text-xs text-gray-400">${item.page || item[1] || ''}</span>
+          </div>`).join('');
+        $('#tab-toc .space-y-2').html(tocHtml);
+      }
+    }
+
     // Update borrow button
     updateBorrowButton(book.status);
+  }
+
+  // Load user profile → avatar initial + borrow quota
+  async function loadUserProfile() {
+    try {
+      const res = await usersAPI.getProfile();
+      const user = res.data;
+
+      // Nav avatar initial
+      const initial = user.name ? user.name.charAt(0) : 'U';
+      $('.user-avatar-initial').text(initial);
+
+      // Borrow quota bar
+      const used = user.stats ? user.stats.reading : 0;
+      const quota = user.borrow_quota || 8;
+      $('#borrow-quota-text').text(`已用 ${used}/${quota} 本`);
+      const pct = quota > 0 ? Math.round(used / quota * 100) : 0;
+      $('#borrow-quota-bar').css('width', pct + '%');
+    } catch (err) {
+      console.error('Load user profile error:', err);
+    }
+  }
+
+  // Load reviews for a book
+  async function loadReviews(id) {
+    $('#tab-reviews .space-y-4').html(
+      '<p class="text-sm text-gray-400 text-center py-4"><i class="fas fa-spinner fa-spin mr-1"></i>加载中...</p>'
+    );
+    try {
+      const res = await booksAPI.getReviews(id);
+      const reviews = res.data.reviews || [];
+      renderReviews(reviews);
+    } catch (err) {
+      console.error('Load reviews error:', err);
+      $('#tab-reviews .space-y-4').html(
+        '<p class="text-sm text-gray-400 text-center py-4">加载失败，请稍后重试</p>'
+      );
+    }
+  }
+
+  // Render reviews list
+  function renderReviews(reviews) {
+    if (!reviews.length) {
+      $('#tab-reviews .space-y-4').html(
+        '<p class="text-sm text-gray-400 text-center py-4">暂无评论</p>'
+      );
+      return;
+    }
+    const html = reviews.map((r, i) => `
+      <div class="${i < reviews.length - 1 ? 'border-b border-gray-100 pb-4' : ''}">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <span class="text-primary text-xs font-bold">${r.user_name ? r.user_name.charAt(0) : '匿'}</span>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-800">${maskName(r.user_name)}</p>
+            <div class="flex gap-0.5">${starsHtml(r.rating)}</div>
+          </div>
+          <span class="ml-auto text-xs text-gray-400">${r.created_at ? r.created_at.split('T')[0] : ''}</span>
+        </div>
+        <p class="text-sm text-gray-600">${r.content || ''}</p>
+      </div>
+    `).join('');
+    $('#tab-reviews .space-y-4').html(html);
+    // Update review count in header
+    $('#book-reviews').text(`· ${reviews.length} 条评论`);
+  }
+
+  // Mask user name: 张三 → 张**
+  function maskName(name) {
+    if (!name) return '匿名';
+    return name.charAt(0) + '**';
+  }
+
+  // Return star icons HTML string
+  function starsHtml(rating) {
+    return Array(5).fill(0).map((_, i) =>
+      `<i class="fas fa-star ${i < rating ? 'text-amber-400' : 'text-gray-300'} text-xs"></i>`
+    ).join('');
   }
 
   // Render stars
@@ -218,12 +346,100 @@ $(function () {
     }
   });
 
-  // Global function for similar books
+  // Book switcher helpers
+  function addToSwitcher(book) {
+    recentBooks.set(book.id, book);
+    renderSwitcher();
+  }
+
+  function renderSwitcher() {
+    const html = Array.from(recentBooks.values()).map(b => {
+      const color = COVER_COLORS[(b.id || 0) % COVER_COLORS.length];
+      const active = b.id == currentBookId ? ' active' : '';
+      return `
+        <div class="bk-chip${active}" data-id="${b.id}" onclick="loadBook(${b.id})">
+          <div class="bk-chip-cover" style="background:${color}"></div>
+          <div>
+            <div class="bk-chip-title">${b.title}</div>
+            <div class="bk-chip-author">${b.author}</div>
+          </div>
+        </div>`;
+    }).join('');
+    $('#book-switcher').html(html);
+  }
+
+  // ── UI-only interactions ────────────────────────────────────────────────
+
+  // Bookmark toggle
+  $(document).on('click', '.fa-bookmark', function () {
+    $(this).toggleClass('text-gray-400 text-primary');
+  });
+
+  // Share → toast
+  $(document).on('click', '.fa-share-alt', function () {
+    const $toast = $('<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm px-5 py-2.5 rounded-xl shadow-lg z-50">链接已复制到剪贴板</div>');
+    $('body').append($toast);
+    setTimeout(() => $toast.fadeOut(300, function () { $(this).remove(); }), 2000);
+  });
+
+  // "试读前3章" button
+  $(document).on('click', 'button:contains("试读前3章")', function () {
+    sessionStorage.setItem('nlb_reading_book', currentBookId);
+    navigateTo('reading');
+  });
+
+  // Preview tab "borrowing to read" button
+  $(document).on('click', '#tab-preview .btn-primary', function () {
+    sessionStorage.setItem('nlb_reading_book', currentBookId);
+    navigateTo('reading');
+  });
+
+  // "加入书架（待读）"
+  $(document).on('click', 'button:contains("加入书架")', function () {
+    const $btn = $(this);
+    $btn.html('<i class="fas fa-check mr-2 text-green-500"></i>已加入书架').addClass('bg-green-50 border-green-200');
+    setTimeout(() => navigateTo('bookshelf'), 800);
+  });
+
+  // Download buttons (EPUB / PDF) — feedback only, real download needs auth
+  $(document).on('click', 'button:contains("EPUB 格式"), button:contains("PDF 格式")', function () {
+    const $btn = $(this);
+    const orig = $btn.html();
+    $btn.html('<span class="text-sm text-gray-700"><i class="fas fa-spinner fa-spin mr-2"></i>下载中...</span>');
+    setTimeout(() => {
+      $btn.html('<span class="text-sm text-green-600"><i class="fas fa-check mr-2"></i>下载完成</span>');
+      setTimeout(() => $btn.html(orig), 2000);
+    }, 1500);
+  });
+
+  // "绑定新设备" → devices page
+  $(document).on('click', 'button:contains("绑定新设备")', function () {
+    navigateTo('devices');
+  });
+
+  // "推送至设备" button (bulk push) → push to first bound device
+  $(document).on('click', '.btn-push-device', function () {
+    const $firstDevice = $('.device-card[data-device-id]').first();
+    if ($firstDevice.length) {
+      $firstDevice.trigger('click');
+    } else {
+      navigateTo('devices');
+    }
+  });
+
+  // Global function for book switching (similar books / switcher bar)
   window._loadBook = function(id) {
     currentBookId = id;
+    reviewsLoaded = false;
     sessionStorage.setItem('current_book_id', id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     loadBookDetail(id);
     loadSimilarBooks(id);
+    // Update switcher highlight
+    $('#book-switcher .bk-chip').removeClass('active');
+    $('#book-switcher .bk-chip[data-id="' + id + '"]').addClass('active');
+    // Reset to intro tab
+    const firstTab = document.querySelector('#detail-tabs button');
+    if (firstTab) switchDetailTab(firstTab, 'intro');
   };
 });

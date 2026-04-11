@@ -33,16 +33,27 @@ const ROUTES = {
 
 /**
  * 核心跳转函数
- * @param {string} page - 路由 key，如 'home'、'book-detail'
+ * @param {string} page   - 路由 key，如 'home'、'book-detail'
+ * @param {number} [bookId] - 可选书籍 ID，跳转 book-detail 时传入
  */
-function navigateTo(page) {
+function navigateTo(page, bookId) {
   const url = ROUTES[page];
   if (!url) return;
+
+  // 有 bookId 时，写入 sessionStorage（iframe 和直链模式通用）
+  if (bookId !== undefined && bookId !== null) {
+    sessionStorage.setItem('current_book_id', bookId);
+  }
+
   // 在 iframe 内时，通知父页面切换 iframe src
   if (window.self !== window.top && typeof window.parent.switchPage === 'function') {
     window.parent.switchPage(page, url);
   } else {
-    window.location.href = url;
+    // 直接打开时，同时把 id 挂到 URL query，方便刷新不丢失
+    const dest = (bookId !== undefined && bookId !== null)
+      ? url + '?id=' + bookId
+      : url;
+    window.location.href = dest;
   }
 }
 

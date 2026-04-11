@@ -19,7 +19,7 @@ tailwind.config = {
   .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
   .sidebar-link:hover { background: #1e293b; color: #fff; }
   .sidebar-link.active { background: #1e293b; color: #fff; border-left-color: #3b82f6; font-weight: 500; }
-  .main-content { background: #f8fafc; flex: 1; min-height: 100vh; overflow-y: auto; min-width: 0; }
+  .main-content { background: #f8fafc; flex: 1; height: 100%; overflow-y: auto; min-width: 0; }
   .top-header { background: #fff; border-bottom: 1px solid #e2e8f0; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; z-index: 40; }
   .table-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden; }
   @media (max-width: 1023px) {
@@ -33,7 +33,7 @@ tailwind.config = {
 <script src="api-config.js"></script>
 <script src="api-services.js"></script>
 </head>
-<body class="flex min-h-screen">
+<body class="flex h-screen overflow-hidden">
 
 <!-- Sidebar Backdrop (mobile) -->
 <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
